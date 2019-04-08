@@ -1,0 +1,65 @@
+Symbol,ETFdb Category,Inception,ER,Provider,Group
+FUD,Agricultural Commodities,4/1/2008,0.65%,Not Available,1
+ICLN,Alternative Energy Equities,6/24/2008,0.47%,Not Available,1
+XHB,Building & Construction ,1/31/2006,0.35%,Not Available,1
+VOX,Communications Equities,9/23/2004,0.12%,Vanguard,1
+VCR,Consumer Discretionary Equities,1/26/2004,0.12%,Vanguard,1
+VDC,Consumer Staples Equities,1/26/2004,0.12%,Vanguard,1
+VDE,Energy Equities,9/23/2004,0.12%,Vanguard,1
+VFH,Financials Equities,1/26/2004,0.12%,Vanguard,1
+VHT,Health & Biotech Equities,1/26/2004,0.12%,Vanguard,1
+VIS,Industrials Equities,9/23/2004,0.12%,Vanguard,1
+VAW,Materials,1/26/2004,0.12%,Vanguard,1
+UBM,Metals,4/1/2008,0.65%,Not Available,1
+USO,Oil & Gas,4/10/2006,0.45%,Not Available,1
+VNQ,Real Estate,9/23/2004,0.12%,2 Platforms,1
+XLK,Technology Equities,12/16/1998,0.14%,Not Available,1
+IYT,Transportation Equities,10/6/2003,0.43%,Not Available,1
+VPU,Utilities Equities,1/26/2004,0.12%,Vanguard,1
+FIW,Water Equities ,5/8/2007,0.59%,Not Available,1
+CXA,California Munis,10/10/2007,0.20%,Charles Schwab,2
+LQD,Corporate Bonds,7/22/2002,0.15%,2 Platforms,2
+JNK,High Yield Bonds,11/28/2007,0.40%,TD Ameritrade,2
+IPE,Inflation-Protected Bonds,5/25/2007,0.15%,Not Available,2
+AUNZ,International Government Bonds,6/25/2008,0.45%,E*TRADE,2
+PST,Inverse Bonds,4/29/2008,0.95%,Not Available,2
+TBT,Leveraged Bonds,4/29/2008,0.92%,Not Available,2
+BIL,Money Market,5/25/2007,0.14%,Not Available,2
+MBB,Mortgage Backed Securities,3/13/2007,0.27%,2 Platforms,2
+SHM,National Munis,10/10/2007,0.20%,2 Platforms,2
+INY,New York Munis,10/11/2007,0.20%,Charles Schwab,2
+PFF,Preferred Stock/Convertible Bonds,3/26/2007,0.47%,Fidelity,2
+AGG,Total Bond Market,9/22/2003,0.08%,2 Platforms,2
+VPL,Asia Pacific Equities,3/4/2005,0.12%,Vanguard,3
+EWH,China Equities,3/12/1996,0.49%,Not Available,3
+PCY,Emerging Markets Bonds,10/11/2007,0.50%,2 Platforms,3
+VWO,Emerging Markets Equities,3/4/2005,0.15%,3 Platforms,3
+VGK,Europe Equities,3/4/2005,0.12%,2 Platforms,3
+VEA,Foreign Large Cap Equities,7/20/2007,0.09%,2 Platforms,3
+SCZ,Foreign Small & Mid Cap Equities,12/10/2007,0.40%,2 Platforms,3
+VEU,Global Equities,3/2/2007,0.15%,2 Platforms,3
+IFGL,Global Real Estate,11/12/2007,0.48%,Fidelity,3
+JPP,Japan Equities,11/9/2006,0.30%,Charles Schwab,3
+EWW,Latin America Equities,3/12/1996,0.49%,Not Available,3
+UCI,Commodities,4/1/2008,0.55%,Not Available,4
+XME,Commodity Producers Equities,6/19/2006,0.35%,Not Available,4
+FXE,Currency,12/9/2005,0.40%,Charles Schwab,4
+DGZ,Inverse Commodities,2/27/2008,0.75%,Not Available,4
+DGP,Leveraged Commodities,2/27/2008,0.75%,Not Available,4
+DRR,Leveraged Currency,5/6/2008,0.65%,Not Available,4
+IAU,Precious Metals,1/21/2005,0.25%,Not Available,4
+VTI,All Cap Equities,5/24/2001,0.05%,2 Platforms,5
+AOA,Diversified Portfolio,11/4/2008,0.23%,TD Ameritrade,5
+SH,Inverse Equities,6/19/2006,0.89%,Not Available,5
+SPY,Large Cap Blend Equities,1/22/1993,0.09%,Not Available,5
+VUG,Large Cap Growth Equities,1/26/2004,0.09%,2 Platforms,5
+VTV,Large Cap Value Equities,1/26/2004,0.09%,2 Platforms,5
+SDS,Leveraged Equities,7/11/2006,0.89%,Not Available,5
+VO,Mid Cap Blend Equities,1/26/2004,0.09%,2 Platforms,5
+VOT,Mid Cap Growth Equities,8/17/2006,0.09%,2 Platforms,5
+VOE,Mid Cap Value Equities,8/17/2006,0.09%,2 Platforms,5
+VB,Small Cap Blend Equities,1/26/2004,0.09%,2 Platforms,5
+VBK,Small Cap Growth Equities,1/26/2004,0.09%,3 Platforms,5
+VBR,Small Cap Value Equities,1/26/2004,0.09%,2 Platforms,5
+URE,Leveraged Real Estate,1/30/2007,0.95%,Not Available,6
+LSC,Long-Short,6/10/2008,0.75%,Not Available,6

@@ -1,0 +1,34 @@
+Symbol,Description,Sector,Industry,Price,Volume,ETF Shares,% of Daily Vol,Shares Outstanding,% of Outstanding,NAV,Date
+AAPL,Apple Inc,Technology,Communications Equipment,$170.50,"24,626,814","5,819,817",23.63%,"42,249,000,000",0.01%,"$992,278,798.50",2/15/2019
+AXP,American Express Co,Financial,Consumer Financial Services,$107.69,"3,882,306","5,819,817",149.91%,"843,370,000",0.69%,"$626,736,092.73",2/15/2019
+BA,Boeing Co,Capital Goods,Aerospace & Defense,$418.34,"4,017,338","5,819,817",144.87%,"50,676,000,000",0.01%,"$2,434,662,243.78",2/15/2019
+CAT,Caterpillar Inc,Capital Goods,Constr. & Agric. Machinery,$136.30,"5,217,523","5,819,817",111.54%,"3,727,000,000",0.16%,"$793,241,057.10",2/15/2019
+CSCO,Cisco Systems,Technology,Communications Equipment,$49.35,"30,189,636","5,819,817",19.28%,"15,488,000,000",0.04%,"$287,207,968.95",2/15/2019
+CVX,Chevron Corporation,Energy,Oil & Gas - Integrated,$119.00,"6,209,780","5,819,817",93.72%,"2,774,000,000",0.21%,"$692,558,223.00",2/15/2019
+DIS,Disney (Walt) Co,Services,Broadcasting & Cable TV,$112.50,"8,197,250","5,819,817",71.00%,"3,434,000,000",0.17%,"$654,729,412.50",2/15/2019
+DWDP,DowDuPont Inc,Basic Materials,Chemical Manufacturing,$54.20,"13,438,127","5,819,817",43.31%,"4,658,000,000",0.12%,"$315,434,081.40",2/15/2019
+GS,Goldman Sachs Grp,Financial,Investment Services,$198.65,"3,065,444","5,819,817",189.85%,"2,618,000,000",0.22%,"$1,156,106,647.05",2/15/2019
+HD,Home Depot Inc,Services,Retail (Home Improvement),$192.41,"4,997,891","5,819,817",116.45%,"2,510,000,000",0.23%,"$1,119,790,988.97",2/15/2019
+IBM,Intl Business Machines Corp,Technology,Computer Services,$137.80,"3,844,062","5,819,817",151.40%,"21,462,000,000",0.03%,"$801,970,782.60",2/15/2019
+INTC,Intel Corp,Technology,Semiconductors,$51.67,"22,520,361","5,819,817",25.84%,"895,000,000",0.65%,"$300,709,944.39",2/15/2019
+JNJ,Johnson & Johnson,Healthcare,Biotechnology & Drugs,$136.53,"6,665,038","5,819,817",87.32%,"1,096,000,000",0.53%,"$794,579,615.01",2/15/2019
+JPM,JPMorgan Chase & Co,Financial,Investment Services,$105.56,"14,716,861","5,819,817",39.55%,"3,320,000,000",0.18%,"$614,339,882.52",2/15/2019
+KO,Coca-Cola Co,Consumer/Non-Cyclical,Beverages (Nonalcoholic),$45.32,"35,701,558","5,819,817",16.30%,"2,100,000,000",0.28%,"$263,754,106.44",2/15/2019
+MCD,McDonald's Corp,Services,Restaurants,$179.98,"4,648,604","5,819,817",125.19%,"2,974,000,000",0.20%,"$1,047,450,663.66",2/15/2019
+MMM,3M Co,Capital Goods,Constr. - Supplies & Fixtures,$208.50,"2,000,378","5,819,817",290.94%,"3,018,000,000",0.19%,"$1,213,431,844.50",2/15/2019
+MRK,Merck & Co,Healthcare,Biotechnology & Drugs,$79.84,"10,387,517","5,819,817",56.03%,"2,128,000,000",0.27%,"$464,654,189.28",2/15/2019
+MSFT,Microsoft Corp,Technology,Software & Programming,$108.20,"26,606,886","5,819,817",21.87%,"32,949,000,000",0.02%,"$629,704,199.40",2/15/2019
+NKE,Nike Inc Cl B,Consumer Cyclical,Footwear,$85.30,"6,111,250","5,819,817",95.23%,"923,000,000",0.63%,"$496,430,390.10",2/15/2019
+PFE,Pfizer Inc,Healthcare,Biotechnology & Drugs,$42.40,"18,186,859","5,819,817",32.00%,"15,235,000,000",0.04%,"$246,760,240.80",2/15/2019
+PG,Procter & Gamble Co,Consumer/Non-Cyclical,Personal & Household Prods.,$98.56,"12,069,080","5,819,817",48.22%,"2,500,000,000",0.23%,"$573,601,163.52",2/15/2019
+TRV,The Travelers Companies Inc,Financial,Insurance (Prop. & Casualty),$129.70,"1,304,575","5,819,817",446.11%,"4,785,000,000",0.12%,"$754,830,264.90",2/15/2019
+UNH,UnitedHealth Grp Inc,Financial,Insurance (Accident & Health),$270.60,"3,673,690","5,819,817",158.42%,"861,750,000",0.68%,"$1,574,842,480.20",2/15/2019
+UTX,United Technologies Corp,Capital Goods,Aerospace & Defense,$127.60,"6,828,359","5,819,817",85.23%,"5,892,000,000",0.10%,"$742,608,649.20",2/15/2019
+V,Visa Inc,Services,Business Services,$144.91,"6,536,038","5,819,817",89.04%,"9,849,000,000",0.06%,"$843,349,681.47",2/15/2019
+VZ,Verizon Communications,Services,Communications Services,$55.10,"15,719,416","5,819,817",37.02%,"8,239,000,000",0.07%,"$320,671,916.70",2/15/2019
+WBA,Walgreen Boots Alliance Inc,Services,Retail (Drugs),$73.60,"4,670,444","5,819,817",124.61%,"618,000,000",0.94%,"$428,338,531.20",2/15/2019
+WMT,Wal-Mart Stores,Services,Retail (Grocery),$100.15,"9,480,983","5,819,817",61.38%,"2,132,000,000",0.27%,"$582,854,672.55",2/15/2019
+XOM,Exxon Mobil,Energy,Oil & Gas Operations,$77.71,"14,330,339","5,819,817",40.61%,"4,161,000,000",0.14%,"$452,257,979.07",2/15/2019
+Divisor,DivisorForFeb152019,Financial,Misc. Financial Services,0.14748072,,, ,,,"$22,219,886,711.49",2/15/2019
+$INDU,DJIA Index,Financial,Misc. Financial Services,"25,883.25",,,,,,, 
+DIA,SPDR DJ Industrial Average ETF,Financial,Misc. Financial Services,258.65,,,,,, , 
