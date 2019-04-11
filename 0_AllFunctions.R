@@ -21,7 +21,7 @@ f.df2xtsD <- function(x,dname) {
     dpos<-str_which(dname,names(x))
     
     df.xts<-xts(x[-dpos],order.by=v.d);
-    names(df.xts)<-names(x)[-1]
+    names(df.xts)<-names(x)[-dpos]
     return(df.xts)
     #data.frame(Date=index(x), coredata(x))
 }

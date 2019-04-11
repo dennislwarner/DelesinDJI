@@ -48,6 +48,7 @@ library(BART);
 library(rJava)
 library(bartMachine);
 library(robustHD);
+library(xlsx)
 #library(installr)
 #check.for.updates.R()
 #install.R() 
