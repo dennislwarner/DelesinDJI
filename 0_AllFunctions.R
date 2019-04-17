@@ -49,6 +49,7 @@ f.getSPY <- function() {
     df.SPY <- as_tbl_time(df.SPY, index = Date)
     return(df.SPY)
 }
+
 f.getSPYRoR<-function(){
     #load a daily history of SPY.  convert to a weekly
     #series of prices, then compoute the 1week, 1 quarter,
@@ -257,59 +258,3 @@ ulc<-function(X,n=5){X[1:n,1:n]}
 llc<-function(X,n=5){X[(nrow(X)-(n-1)):nrow(X),1:n]}
 lrc<-function(X,n=5){X[(nrow(X)-(n-1)):nrow(X),(ncol(X)-n+1):ncol(X)]}
 
-f.buildDJIdata<-function(){
-    #original data from MH
-    dirPriceData   <- paste(dirData,"/AdjOpens/Sectors",sep="");
-    fnin         <- "DJ_OrigData.csv";
-    df.data      <- read_csv(fnin,);
-    df.odata.xts<-f.df2xts(df.data); # Get mike's original data in xts form
-    
-    firstdate    <- index(first(df.data.xts));
-    lastdate     <- index(last(df.data.xts));
-    origspan     <- paste(firstdate,"/",lastdate,sep="");
-    #we must  find all the split dates for every dow component
-    #read in the compositioin data
-    df.DJIAComposition<-read.xlsx(paste(dirDocs,"/DJIAComposition.xlsx",sep=""),sheetName="DJIAComposition");
-    v.changedates<- df.DJIAComposition$ChangeDates;
-    nchangedates <-length(v.changedates);
-    firstgood<-v.changedates[nchangedates-1];
-    lastgood <-v.changedates[nchangedates]-1;
-    goodspan<-paste(firstgood,"/",lastgood,sep="");
-    #Load all the component data
-    v.tickers<-names(df.DJIAComposition)[-1];
-    v.v<-v.tickers[v.tickers%in% c("DOW","AAPL")];
-    dt.CO<-dt.Common%>%dplyr::filter(ticker %in% v.tickers)%>%filter(ticker!="DOW")%>%filter(ticker!="AAPL"); #select the dictionary entries for the 30 DJI stocks
-    #load aapl to get date range
-    
-    fnin<-paste(dirPriceData,"/Technology/AAPL.RDATA",sep="");
-    ss_dt.p<-load(fnin)
-    fnout<-"dt.p.csv"
-    write.csv(dt.p,file=fnout)
-    
-    dt.p<-dt.p%>%dplyr::select(date,closeunadj)
-    
-    dt.Prices.xts<-f.df2xtsD(dt.p,"date")
-    names(dt.Prices.xts)[1]<-"AAPL";
-    v.tickers<-dt.CO$ticker;
-    iticker<-0;
-    while(iticker<length(v.tickers)){
-        iticker<-iticker+1;
-        symb<-v.tickers[iticker];
-        #if(!is.na(match(symb,dt.CO$ticker))){
-        dt.coo<-dt.CO%>%filter(ticker==symb)
-        #cat(iticker,symb,dt.coo$ticker,"\n");
-        fnin<-paste(dirPriceData,"/",dt.coo$sector,"/",dt.coo$ticker,".RDATA",sep="");
-        ss_dt.p<-load(fnin)
-        dt.p<-dt.p%>%dplyr::select(date,closeunadj)
-        dt.p.xts<-f.df2xtsD(dt.p,"date")
-        names(dt.p.xts)[1]<-symb;
-        dt.Prices.xts<-merge.xts(dt.Prices.xts,dt.p.xts,join='left');
-        #}
-        #cat(iticker,symbol,match(ticker,dt.CO$ticker),"\n");
-    }
-    #merge the original DJIA data with the loaded unadjusted prices for the components
-    dt.X.xts<-merge.xts(dt.Prices.xts,df.odata.xts,join='left')[origspan];
-    fnout<-"dt.X.xts.RDATA";
-    save(dt.X.xts,file=fnout);
-    return(dt.X.xts);
-}
