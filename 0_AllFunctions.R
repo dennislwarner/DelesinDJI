@@ -42,6 +42,32 @@ f.divSum<-function(x,y,z){
     vv<-na.locf(v,na.rm=FALSE);
     return(vv)
 }
+f.getETFpackage <- function(v.etfTickers) {
+    it <- 1
+    for (it in c(1:length(v.etfTickers))) {
+        itick <- v.etfTickers[it]
+        #cat(it, itick, "\n")
+        fn <- paste("EOD/", itick, ".8", sep = "")
+        #get adjusted close..................
+        # fn<-paste("EOD/",itick,sep="")   
+        #get adjusted close..................
+        #df.op <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
+        #                type = "xts", start_date = "2003-01-01")
+        fn <- paste("EOD/", itick, ".11", sep = "")
+        #get adjusted close..................
+        # fn<-paste("EOD/",itick,sep="")   #get adjusted close..................
+        df.cl <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
+                        type = "xts", start_date = "2003-01-01")
+        if(it==1){
+            df<-df.cl;
+            names(df)[1]<-itick;
+        }else{
+            df<-merge.xts(df,df.cl,join='left');
+            names(df)[ncol(df)]<-itick;
+        }
+    }
+    return(df);
+}
 f.getSPY <- function() {
     df.SPY <- Quandl('EOD/SPY', api_key = '1yhZtVwmHpc7qys3iMuJ',
                      start_date = "1998-01-02",
@@ -49,7 +75,6 @@ f.getSPY <- function() {
     df.SPY <- as_tbl_time(df.SPY, index = Date)
     return(df.SPY)
 }
-
 f.getSPYRoR<-function(){
     #load a daily history of SPY.  convert to a weekly
     #series of prices, then compoute the 1week, 1 quarter,
