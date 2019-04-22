@@ -17,10 +17,10 @@ source(paste(dirProject,"/0_Prep.R",sep=""));
 v.SectorETFS<-c("XLC","XLY","XLP","XLE","XLF","XLV","XLI","XLB","XLRE","XLSR","XLK","XLU")
 v.BigETFs<-c("SPY","MDY","SLY","DIA")
 v.IndustryETFs<-c("XITK","XNTK","XAR","KBE","XBI",
-                "KCE","XHE","XHS","XHB","KIE",
-                "XWEB","XME","XES","XOP","XPH",
-                "KRE","XRT","XSD","XSW","XTH",
-                "XTL","XTN");
+                  "KCE","XHE","XHS","XHB","KIE",
+                  "XWEB","XME","XES","XOP","XPH",
+                  "KRE","XRT","XSD","XSW","XTH",
+                  "XTL","XTN");
 df.shorts<-read.csv("Docs/Shorts.csv",stringsAsFactors = FALSE)
 v.shorts<-names(df.shorts)
 df.EODTickers<-read.csv("Docs/EODTicker.csv",stringsAsFactors = FALSE)
@@ -29,8 +29,6 @@ df.SectorETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.SectorETFS)
 df.BigETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.BigETFs)
 df.IndustryETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.IndustryETFs)
 df.ShortsETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.shorts)
-fnin<-paste(dirDocs,"/TargetDirectory.xlsx",sep="");
-df.TargetDirectoryETFs<-read.xlsx(fnin,sheetIndex = 1)
 
 #Begin analysis
 targetETF<-"XHS";
@@ -52,49 +50,17 @@ ihold<-0;
 while(ihold<length(v.holdings)){
     ihold<-ihold+1;
     hold<-v.holdings[ihold]
-    if(hold=="Original"){next}
+    if(hold=="Orig"){next}
     hold<-str_sub(hold,start=1,end=-5);
     etf<-str_sub(hold,1,-3)
-    fnin<-paste(dirHoldings,"/",hold,".csv",sep="");
-    df.x<-read.csv(fnin);
-    v.etfTickers<-c(etf,as.character(df.x$Identifier));
-    etfCO<-df.EODTickers%>%dplyr::filter(Ticker==etf)
-    df.CO<-df.EODTickers%>%dplyr::filter(Ticker %in% v.etfTickers)
-    s<-setdiff(v.etfTickers,df.CO$Ticker)
-    df.good<-df.CO%>%dplyr::filter(Ticker %in% v.etfTickers) ;
-    v.goodSymbol<-df.good$Quandl_Code#[v.etfTickers %in% df.CO$Ticker]
-    df.x.xts<-f.getETFpackage(v.goodSymbol)
-    fnout<-paste(dirPackages,"/",etf,"_P.xts",sep="");
-    save(df.x.xts,file=fnout)
-    cat(ihold,etf,"---",etfCO$Name,"#Companies = ",nrow(df.CO)-1,"\n");
-   
+    cat(ihold,hold,etf,"\n");
+    #retrieve the data 
+    fn <- paste("EOD/",etf, ".11", sep = "")
+    
+    df.cl.xts <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
+                        type = "xts", start_date = "2003-01-01")
+    plot.xts(df.cl.xts,main=etf)
+    
 }
-
-v.ETFs<-str_sub(v.holdings,1,-7)
-df.ETFdict<-df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
-
-#work on the retail
-
-library(fPortfolio)
-library(PerformanceAnalytics)
-library(GA)
-
-
-ietf<-1;
-df.TargetDirectoryETFs$ETF<-as.character(df.TargetDirectoryETFs$ETF)
-etf<-as.character(df.TargetDirectoryETFs$ETF)[ietf]
-symb<-str_sub(etf,1,-3)
-df.dictentry<-df.TargetDirectoryETFs%>%dplyr::filter(ETF==etf)
-fnin<-paste(dirPackages,"/",symb,"_P.xts",sep="")
-ss_df.x.xts<-load(fnin)
-
-
-#ensure coloumns are in required order, where the target etf is the last column
-df.x<-f.xts2df(df.x.xts)
-v.target<-df.x[,symb]
-M<-ncol(df.x.xts)
-
-
-l.Res<-f.ProcessEstimates(df.x.xts,df.dictentry)
-
-
+    
+    
