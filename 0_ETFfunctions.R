@@ -25,7 +25,7 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     df.z<-f.xts2df(df.z.xts)
     v.dates<-df.z$Date;
     v.etf<-df.z[,ncol(df.z)]
-    v.etf<-df.z[,]
+   # v.etf<-df.z[,]
   
     M<-ncol(df.z)-2
     m.p<-as.matrix(df.z[,-1])
@@ -40,6 +40,7 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     }
       m.r[is.na(m.r)]<-0
     #begin optimization
+      v.targetror<-m.r[,ncol(m.r)]
     m.ror<-m.r[,-ncol(m.r)];
     nobs<-nrow(m.ror)
     span<-24
@@ -47,7 +48,7 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     
     
     m.x<-m.ror[1:span,]
-    v.etfror<-m.r[,ncol(m.r)];
+    
     #  break i up into rolling chunks, beginning at a 5 year poit and rolling by 1 year
     
     neras<-(nobs-span)/cspan
@@ -73,22 +74,122 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
         top<-min(25,M)
         v.wanted<-dfr$vnc[1:top]
         m.x<-m.xx[,v.wanted]
+        m.x<-m.xx;
         tic();
-        defaultControl <- gaControl()
-        #print( "gareal_Population")
-        ga_res<-ga(type="real-valued",
-                   function(x){-obj(x)},
-                   lower=rep(0,ncol(m.x)),
-                   upper=rep(1,ncol(m.x)),
-                   maxiter=50000,
-                   popSize=100,
-                   elitism=25,
-                   run=50,
-                   parallel=TRUE,
-                   monitor=FALSE,
-                   seed=1);
+        #PortfolioAnalytics Solution
+        library(PortfolioAnalytics)
+        returns<-m.x
+        R<-m.x
+        R.xts<-as.xts(R,order.by=v.dates[first:last])
+        stock.names<-colnames(m.x);
+        #create portfolio object
+        pspec<-portfolio.spec(assets=stock.names)
+        print.default(pspec);
+        pspec<-add.constraint(portfolio=pspec,
+                              type="full_investment" );
+        pspec<-add.constraint(portfolio=pspec,
+                             type="box",
+                             min=0.0,
+                             max=.3);
+        pspec<-add.constraint(portfolio=pspec,
+                             type="position_limit",
+                             max_pos=20);
+        target_ror<-max(mean(v.targetror[first:last]),0)
+        pspec<-add.constraint(portfolio=pspec,
+                             type="return",
+                             return_target=target_ror);
+        pspec<-add.objective(portfolio=pspec,
+                             type='risk',
+                             name='Etl',
+                             arguments=list(p=0.95))
+        print(pspec)
+        rp1 <- random_portfolios(portfolio=pspec, permutations=5000,rp_method='sample')
+        rp2 <- random_portfolios(portfolio=pspec, permutations=5000,rp_method='simplex')
+        tmp1.mean <- apply(rp1, 1, function(x) mean(R.xts %*% x))
+        tmp1.StdDev <- apply(rp1, 1, function(x) StdDev(R=R.xts, weights=x))
+        plot(x=tmp1.StdDev, y=tmp1.mean, col="gray", main="Random Portfolio Methods",
+               ylab="mean", xlab="StdDev");
+        tmp2.mean<- apply(rp2, 1, function(x) mean(R.xts %*% x));
+        tmp2.StdDev <- apply(rp2, 1, function(x) StdDev(R=R.xts, weights=x))
+        plot(x=tmp2.StdDev, y=tmp2.mean, col="gray", main="Random Portfolio Methods",
+             ylab="mean", xlab="StdDev");
         
-        v.weights<-ga_res@solution[1,]
+        library(DEoptim)
+        library(ROI)
+        require(ROI.plugin.glpk)
+        require(ROI.plugin.quadprog)
+        library(psoptim)
+        library(GenSA)
+        
+        R<-m.x
+        R.xts<-as.xts(R,order.by=v.dates[first:last])
+        stocks<-colnames(R);
+        # Create an initial portfolio object with leverage and box constraints
+        init <- portfolio.spec(assets=stocks)
+        init<-add.constraint(portfolio=init,
+                              type="box",
+                              min=0.0,
+                              max=.3);
+        #init <- add.constraint(portfolio=init, type="leverage",min_sum=0.99, max_sum=1.01)
+        #init <- add.constraint(portfolio=init, type="box", min=0.05, max=0.65);
+        init<-add.constraint(portfolio=init, type="leverage",min_sum=0.99, max_sum=1.01)
+        #init<-add.constraint(portfolio=init,
+         #                     type="full_investment" );
+        #Add an objective to maximize mean return.
+        maxret <- add.objective(portfolio=init, type="return", name="mean")
+        #Run the optimization.
+       opt_maxret <- optimize.portfolio(R=R.xts, portfolio=maxret,optimize_method="ROI",trace=TRUE)
+                                        
+       print(opt_maxret);
+       #Chart the weights and optimal portfolio in risk-return space.
+       plot(opt_maxret, risk.col="StdDev", return.col="mean",main="Maximum Return Optimization", 
+            chart.assets=TRUE,xlim=c(0, 0.05), 
+            ylim=c(0,0.0085));
+    #Add an objective to minimize portfolio variance.       
+       minvar <- add.objective(portfolio=init, type="risk", name="var");
+      
+       opt_minvar <- optimize.portfolio(R=R.xts, portfolio=minvar,
+                                        optimize_method="ROI", trace=TRUE)
+       print(opt_minvar)
+       qu <- add.objective(portfolio=init, type="return", name="mean")
+       qu <- add.objective(portfolio=qu, type="risk", name="var", risk_aversion=0.50)
+       opt_qu <- optimize.portfolio(R=R.xts, portfolio=qu,
+                                    optimize_method="ROI",
+                                    trace=TRUE)
+       
+       etl <- add.objective(portfolio=init, type="risk", name="ETL")
+       opt_etl=optimize.portfolio(R = R.xts, portfolio = etl, optimize_method = "ROI",
+                          trace = TRUE)
+       plot(opt_etl, risk.col="ES", return.col="mean",
+            main="ETL Optimization", chart.assets=TRUE,
+            xlim=c(0, 0.14), ylim=c(0,0.0085))
+       
+       meanETL <- add.objective(portfolio=init, type="return", name="mean")
+       meanETL <- add.objective(portfolio=meanETL, type="risk", name="ETL",
+                                  arguments=list(p=0.95))
+       #Run the optimization. The default random portfolio method is 'sample'.
+      opt_meanETL <- optimize.portfolio(R=R.xts, portfolio=meanETL,optimize_method="random",trace=TRUE, search_size=2000)
+                                          
+                                          
+      print(opt_meanETL)
+       
+        # #---------------Genetic Algorithm Solution--------------------------------------------------
+        # defaultControl <- gaControl()
+        # #print( "gareal_Population")
+        # ga_res<-ga(type="real-valued",
+        #            function(x){-obj(x)},
+        #            lower=rep(0,ncol(m.x)),
+        #            upper=rep(1,ncol(m.x)),
+        #            maxiter=50000,
+        #            popSize=100,
+        #            elitism=25,
+        #            run=50,
+        #            parallel=TRUE,
+        #            monitor=FALSE,
+        #            seed=1);
+        # 
+        # v.weights<-ga_res@solution[1,]
+        #--------------------------------------------------------
         df.res<-data.frame(colnames(m.x),v.weights)
         v.portRor<-portreturns(v.weights)
         summary(v.portRor)

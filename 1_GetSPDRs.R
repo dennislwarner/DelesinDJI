@@ -80,7 +80,7 @@ library(PerformanceAnalytics)
 library(GA)
 
 
-ietf<-1;
+ietf<-2;
 df.TargetDirectoryETFs$ETF<-as.character(df.TargetDirectoryETFs$ETF)
 etf<-as.character(df.TargetDirectoryETFs$ETF)[ietf]
 symb<-str_sub(etf,1,-3)
@@ -92,6 +92,9 @@ ss_df.x.xts<-load(fnin)
 #ensure coloumns are in required order, where the target etf is the last column
 df.x<-f.xts2df(df.x.xts)
 v.target<-df.x[,symb]
+df.xx<-df.x%>%dplyr::select(-symb)
+df.xx<-data.frame(df.xx,v.target);names(df.xx)[ncol(df.xx)]<-symb
+df.x.xts<-df.xx%>%f.df2xts()
 M<-ncol(df.x.xts)
 
 
