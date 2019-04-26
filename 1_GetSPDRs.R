@@ -78,16 +78,22 @@ df.ETFdict<-df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
 library(fPortfolio)
 library(PerformanceAnalytics)
 library(GA)
+library(PortfolioAnalytics)
+library(DEoptim)
+library(ROI)
+require(ROI.plugin.glpk)
+require(ROI.plugin.quadprog)
+library(psoptim)
+library(GenSA)
+library(foreach)
+registerDoSEQ()
 
-
-ietf<-2;
+ietf<-12;
 df.TargetDirectoryETFs$ETF<-as.character(df.TargetDirectoryETFs$ETF)
-etf<-as.character(df.TargetDirectoryETFs$ETF)[ietf]
-symb<-str_sub(etf,1,-3)
-df.dictentry<-df.TargetDirectoryETFs%>%dplyr::filter(ETF==etf)
+df.dictentry<-df.TargetDirectoryETFs[ietf,]
+symb<-str_sub(df.dictentry$ETF,1,-3)
 fnin<-paste(dirPackages,"/",symb,"_P.xts",sep="")
 ss_df.x.xts<-load(fnin)
-
 
 #ensure coloumns are in required order, where the target etf is the last column
 df.x<-f.xts2df(df.x.xts)

@@ -21,15 +21,19 @@ obj<-function(x){
 }
 f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     v.eom<-endpoints(df.x.xts,on="months")
-    df.z.xts<-df.x.xts[v.eom,]
-    df.z<-f.xts2df(df.z.xts)
-    v.dates<-df.z$Date;
+    df.z.xts         <- df.x.xts[v.eom,]
+    df.z             <- f.xts2df(df.z.xts)
+    v.dates          <- df.z$Date;
+    v.etf.xts<-df.z.xts[,ncol(df.z.xts)]
     v.etf<-df.z[,ncol(df.z)]
+    #make sure simulation doesn't start before target etf
+    v.nonna<-!is.na(v.etf)
+    firstsimobs<-which(!is.na(v.etf))[1]
    # v.etf<-df.z[,]
-  
-    M<-ncol(df.z)-2
-    m.p<-as.matrix(df.z[,-1])
-    m.r<-m.p*0
+ 
+    M      <- ncol(df.z)-2
+    m.p    <- as.matrix(df.z[,-1])
+    m.r    <- m.p*0
   
     i<-2
     for(i in 1:ncol(m.r)){
@@ -38,194 +42,92 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
         returns<-log(p/plag);
         m.r[,i]<-returns;
     }
-      m.r[is.na(m.r)]<-0
+    m.r[is.na(m.r)]<-0
     #begin optimization
-      v.targetror<-m.r[,ncol(m.r)]
+    v.targetror<-m.r[,ncol(m.r)]
+    v.targetror.xts<-as.xts(v.targetror,order.by = v.dates)
     m.ror<-m.r[,-ncol(m.r)];
     nobs<-nrow(m.ror)
     span<-24
+    padding<-0
+    if(span<firstsimobs){
+        padding<-firstsimobs-span-1
+    }
     cspan<-12
-    
-    
-    m.x<-m.ror[1:span,]
-    
-    #  break i up into rolling chunks, beginning at a 5 year poit and rolling by 1 year
-    
-    neras<-(nobs-span)/cspan
-    
-  
+    m.x<-m.ror[(padding+1):nobs,];#chop off unneded beginning data that will never be used
+   
+    #  break i up into rolling chunks, beginning at a 2 year point and rolling by 1 year
+    neras<-max(((nobs-padding)-span)/cspan,1)
     #prepare output for simulation
     df.ARB<-data.frame(matrix(0,nobs,6))
+    df.ARB.xts<-as.xts(df.ARB,order.by = v.dates)
     df.Eras<-data.frame(matrix(0,neras,6)) #save Room for weights and summaries
-    names(df.ARB)<-c("ETF","Port","difRor","CumETF","CumPort","difCumRor")
-    
+    names(df.ARB.xts)<-names(df.ARB)<-c("ETF","Port","difRor","CumETF","CumPort","difCumRor")
     iera<-0;
-   
-    while(iera<neras){
-        iera<-iera+1;
-        first<-(iera-1)*cspan+1;
-        last<-first+span-1
-        #cat(iera,first,last,"\n");
-        m.xx<-m.ror[first:last,];
-        #find the 30 stocks with best sharpe ratio
-        v.rorsums<-colSums(m.xx)
-        v.ranks<-rank(v.rorsums)
-        dfr<-data.frame(vn=colnames(m.xx),vnc=1:M,RorSum=v.rorsums,RorRank=v.ranks)%>%dplyr::arrange(desc(RorRank))
-        top<-min(25,M)
-        v.wanted<-dfr$vnc[1:top]
-        m.x<-m.xx[,v.wanted]
-        m.x<-m.xx;
-        tic();
-        #PortfolioAnalytics Solution
-        library(PortfolioAnalytics)
-        returns<-m.x
-        R<-m.x
-        R.xts<-as.xts(R,order.by=v.dates[first:last])
-        stock.names<-colnames(m.x);
-        #create portfolio object
-        pspec<-portfolio.spec(assets=stock.names)
-        print.default(pspec);
-        pspec<-add.constraint(portfolio=pspec,
-                              type="full_investment" );
-        pspec<-add.constraint(portfolio=pspec,
-                             type="box",
-                             min=0.0,
-                             max=.3);
-        pspec<-add.constraint(portfolio=pspec,
-                             type="position_limit",
-                             max_pos=20);
-        target_ror<-max(mean(v.targetror[first:last]),0)
-        pspec<-add.constraint(portfolio=pspec,
-                             type="return",
-                             return_target=target_ror);
-        pspec<-add.objective(portfolio=pspec,
-                             type='risk',
-                             name='Etl',
-                             arguments=list(p=0.95))
-        print(pspec)
-        rp1 <- random_portfolios(portfolio=pspec, permutations=5000,rp_method='sample')
-        rp2 <- random_portfolios(portfolio=pspec, permutations=5000,rp_method='simplex')
-        tmp1.mean <- apply(rp1, 1, function(x) mean(R.xts %*% x))
-        tmp1.StdDev <- apply(rp1, 1, function(x) StdDev(R=R.xts, weights=x))
-        plot(x=tmp1.StdDev, y=tmp1.mean, col="gray", main="Random Portfolio Methods",
-               ylab="mean", xlab="StdDev");
-        tmp2.mean<- apply(rp2, 1, function(x) mean(R.xts %*% x));
-        tmp2.StdDev <- apply(rp2, 1, function(x) StdDev(R=R.xts, weights=x))
-        plot(x=tmp2.StdDev, y=tmp2.mean, col="gray", main="Random Portfolio Methods",
-             ylab="mean", xlab="StdDev");
-        
-        library(DEoptim)
-        library(ROI)
-        require(ROI.plugin.glpk)
-        require(ROI.plugin.quadprog)
-        library(psoptim)
-        library(GenSA)
-        
-        R<-m.x
-        R.xts<-as.xts(R,order.by=v.dates[first:last])
-        stocks<-colnames(R);
-        # Create an initial portfolio object with leverage and box constraints
-        init <- portfolio.spec(assets=stocks)
-        init<-add.constraint(portfolio=init,
-                              type="box",
-                              min=0.0,
-                              max=.3);
-        #init <- add.constraint(portfolio=init, type="leverage",min_sum=0.99, max_sum=1.01)
-        #init <- add.constraint(portfolio=init, type="box", min=0.05, max=0.65);
-        init<-add.constraint(portfolio=init, type="leverage",min_sum=0.99, max_sum=1.01)
-        #init<-add.constraint(portfolio=init,
-         #                     type="full_investment" );
-        #Add an objective to maximize mean return.
-        maxret <- add.objective(portfolio=init, type="return", name="mean")
-        #Run the optimization.
-       opt_maxret <- optimize.portfolio(R=R.xts, portfolio=maxret,optimize_method="ROI",trace=TRUE)
-                                        
-       print(opt_maxret);
-       #Chart the weights and optimal portfolio in risk-return space.
-       plot(opt_maxret, risk.col="StdDev", return.col="mean",main="Maximum Return Optimization", 
-            chart.assets=TRUE,xlim=c(0, 0.05), 
-            ylim=c(0,0.0085));
-    #Add an objective to minimize portfolio variance.       
-       minvar <- add.objective(portfolio=init, type="risk", name="var");
-      
-       opt_minvar <- optimize.portfolio(R=R.xts, portfolio=minvar,
-                                        optimize_method="ROI", trace=TRUE)
-       print(opt_minvar)
-       qu <- add.objective(portfolio=init, type="return", name="mean")
-       qu <- add.objective(portfolio=qu, type="risk", name="var", risk_aversion=0.50)
-       opt_qu <- optimize.portfolio(R=R.xts, portfolio=qu,
-                                    optimize_method="ROI",
-                                    trace=TRUE)
-       
-       etl <- add.objective(portfolio=init, type="risk", name="ETL")
-       opt_etl=optimize.portfolio(R = R.xts, portfolio = etl, optimize_method = "ROI",
-                          trace = TRUE)
-       plot(opt_etl, risk.col="ES", return.col="mean",
-            main="ETL Optimization", chart.assets=TRUE,
-            xlim=c(0, 0.14), ylim=c(0,0.0085))
-       
-       meanETL <- add.objective(portfolio=init, type="return", name="mean")
-       meanETL <- add.objective(portfolio=meanETL, type="risk", name="ETL",
-                                  arguments=list(p=0.95))
-       #Run the optimization. The default random portfolio method is 'sample'.
-      opt_meanETL <- optimize.portfolio(R=R.xts, portfolio=meanETL,optimize_method="random",trace=TRUE, search_size=2000)
-                                          
-                                          
-      print(opt_meanETL)
-       
-        # #---------------Genetic Algorithm Solution--------------------------------------------------
-        # defaultControl <- gaControl()
-        # #print( "gareal_Population")
-        # ga_res<-ga(type="real-valued",
-        #            function(x){-obj(x)},
-        #            lower=rep(0,ncol(m.x)),
-        #            upper=rep(1,ncol(m.x)),
-        #            maxiter=50000,
-        #            popSize=100,
-        #            elitism=25,
-        #            run=50,
-        #            parallel=TRUE,
-        #            monitor=FALSE,
-        #            seed=1);
-        # 
-        # v.weights<-ga_res@solution[1,]
-        #--------------------------------------------------------
-        df.res<-data.frame(colnames(m.x),v.weights)
-        v.portRor<-portreturns(v.weights)
-        summary(v.portRor)
-        sd(v.portRor)
-        summary(v.etfror)
-        sd(v.etfror)
-        sharpe(v.weights)
-        tseries::sharpe(v.etfror[first:last])
-        tseries::sharpe(v.portRor)
-        df.Ror<-data.frame(ETF=cumsum(v.etfror[first:last]),PORT=cumsum(v.portRor))
-        df.Ror.xts<-as.xts(df.Ror,order.by = v.dates[first:last])
-        plottitle=paste(df.dictentry$Description,"/Insample",sep="")
-        plot.xts(df.Ror.xts,legend.loc='left',main=plottitle)
-        firstout<-last+1;
-        lastout<-min(last+cspan,nobs)
-        m.xout<-m.ror[firstout:lastout,v.wanted]
-        v.portRorout<-m.xout%*%v.weights
-        v.datesout<-v.dates[firstout:lastout]
-        df.Rorout<-data.frame(ETF=cumsum(v.etfror[firstout:lastout]),PORT=cumsum(v.portRorout))
-        df.Rorout.xts<-as.xts(df.Rorout,order.by = v.datesout)
-        plottitle=paste(df.dictentry$Description,"/Out of Sample",sep="")
-        plot.xts(df.Rorout.xts,legend.loc='left',main=plottitle)
-        df.ARB$ETF[firstout:lastout]<-v.etfror[firstout:lastout];
-        df.ARB$Port[firstout:lastout]<-v.portRorout;
-       
-        #df.Eras[iera,1:length(v.weights)]<-v.weights
-        
-        toc();
-    }
-    df.ARB<-df.ARB%>%dplyr::mutate(difRor=Port-ETF,CumETF=cumsum(ETF),CumPort=cumsum(Port),difCumRor=CumPort-CumETF)%>%
-                     dplyr::select(ETF,Port,difRor,CumETF,CumPort,difCumRor)
-    df.ARB.xts<-as.xts(df.ARB[-c(1:span),],order.by = v.dates[-c(1:span)])
-    df.Compare.xts<-df.ARB.xts[,c("CumETF","CumPort")]
+    v.d<-v.dates[(padding+1):nobs]
+    R<-m.r[(padding+1):nobs,-ncol(m.r)]
+    R.xts<-as.xts(R,order.by=v.d)
+    stocks<-colnames(R);
+    # firstdate
+    # match(firstdate,v.d)
+    portf <- portfolio.spec(stocks)
+   # portf <- add.constraint(portf, type="full_investment")
+    portf <- add.constraint(portf, type="long_only")
+    #portf <- add.objective(portf, type="risk", name="StdDev")
+    portf <- add.objective(portf, type="quadratic_utility", 
+                                 risk_aversion=0.25)
+    portf<-add.constraint(portfolio=portf,type="box", min=0.0, max=.3);
+    portf<-add.constraint(portfolio=portf, type="leverage",min_sum=0.99, max_sum=1.01)
+    # annual rebalancing with 2 year training period
+    tic();
+    bt.opt1 <- optimize.portfolio.rebalancing(R.xts, portf,
+                                              optimize_method="random",
+                                              rebalance_on="years",
+                                              training_period=24,
+                                              rolling_window=24)
+    bt.opt2 <- optimize.portfolio.rebalancing(R.xts, portf,
+                                              optimize_method="ROI",
+                                              rebalance_on="years",
+                                              training_period=24,
+                                              rolling_window=24)
+    bt.vw<-inverse.volatility.weight(R.xts,portf)
+    bt.vw$out
+    toc();
+    bt.opt1$elapsed_time
+    bt.opt1$portfolio
+    #bt.opt1$R
+   #str(bt.opt1$opt_rebalancing)
+    #number of rebalances---------------
+    nper<-length(bt.opt1$opt_rebalancing)
+    #for each rebalancing period compute the projections
+    iper<-0;
+    df.R<-f.xts2df(R.xts)
+    v.rebalancingdates<-names(bt.opt1$opt_rebalancing)
+    pa<-paste(v.rebalancing[[1]],"/",sep="")
+    RG.xts<-R.xts[pa]
+    while(iper<nper){
+        iper<-iper+1;
+        l.or            <- bt.opt1$opt_rebalancing[[iper]];
+        fd<-as.Date(v.rebalancingdates[iper]);
+        ld<-as.Date(v.rebalancingdates[iper+1])-1;
+        if(iper<nper){
+            testspan<-paste(fd,ld,sep="/")
+        }else{
+            testspan<-paste(fd,"/",sep="");
+        }
+        RR<-R.xts[testspan,]
+        v.weights<-l.or$weights
+        v.port<-RR%*%v.weights;
+        df.ARB.xts[testspan,"ETF"]<-(v.targetror.xts[testspan])
+        df.ARB.xts[testspan,"Port"]<-v.port
+    }  
+    df.ARB<-df.ARB.xts%>%f.xts2df()
+    df.ARB<-df.ARB%>%dplyr::mutate (difRor=Port-ETF,CumETF=cumsum(ETF),CumPort=cumsum(Port),difCumRor=CumPort-CumETF)
+    df.ARB.xts<-df.ARB%>%f.df2xts()
+    df.ARB.xts<-as.xts(df.ARB,order.by = v.dates); 
+    plottitle<-paste()
     plottitle=paste(df.dictentry$Description,"/2Y|1Y",sep="")
-    plot.xts(df.Compare.xts,legend.loc='left',main=plottitle)
-    vplot<-plot.xts(df.Compare.xts,legend.loc='left',main=plottitle)
+    vplot<-plot.xts(df.ARB.xts[pa,c("CumETF","CumPort")],legend.loc='left',main=plottitle);
     l.RES<-list(df.ARB.xts=df.ARB.xts,df.Eras=df.Eras,vplot=vplot);
     return(l.RES)
 }
