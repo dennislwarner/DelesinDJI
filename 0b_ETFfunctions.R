@@ -19,6 +19,7 @@ constraint<-function(x){
 obj<-function(x){
     return(-sharpe(x)+100*constraint(x))
 }
+##################################################
 f.prepPortData<-function(df.x.xts,freq,trainyears,testyears){
     #Transform to desired frequency----
     obsperyear<-switch(freq,
@@ -33,7 +34,7 @@ f.prepPortData<-function(df.x.xts,freq,trainyears,testyears){
     df.z.xts   <- df.x.xts[v.eop,]
     df.z       <- f.xts2df(df.z.xts)
     v.dates    <- df.z$Date;
-    v.etf.xts<-df.z.xts[,ncol(df.z.xts)]
+    v.etf.xts  <- df.z.xts[,ncol(df.z.xts)]
     #----
     #Truncate beginning until reach useful target data----
     v.etf         <- df.z[,ncol(df.z)];
@@ -45,17 +46,19 @@ f.prepPortData<-function(df.x.xts,freq,trainyears,testyears){
     lTsto<-0;
     while(lTsto<nobs){
         iera<-iera+1;
-        fTsto<-firstSim+(iera-1)*testperiods;
+        fTsto<-trainperiods+firstSim+(iera-1)*testperiods;
         lTsto<-min(fTsto+testperiods-1,nobs)
         lTrno<-fTsto-1;
         fTrno<-fTsto-trainperiods;
-        fTstd<-v.dates[fTsto];
-        lTstd<-v.dates[lTsto];
-        fTrnd<-v.dates[fTrno];
-        lTrnd<-v.dates[lTrno];
+        
+        
+        fTstd<-as.character(v.dates[fTsto]);
+        lTstd<-as.character(v.dates[lTsto]);
+        fTrnd<-as.character(v.dates[fTrno]);
+        lTrnd<-as.character(v.dates[lTrno]);
         TrnSpan<-paste(fTrnd,lTrnd,sep="/");
         TstSpan<-paste(fTstd,lTstd,sep="/");
-        #cat(iera,fTrno,lTrno,TrnSpan,fTsto,lTsto,TstSpan,"\n");
+        cat(iera,fTrno,lTrno,"TrnSpan=",TrnSpan,fTsto,lTsto,"TestSpan=",TstSpan,"\n");
         lera<-list(fTrno=fTrno,lTrno=lTrno,fTsto=fTsto,lTsto=lTsto,TrnSpan=TrnSpan,TstSpan=TstSpan)
         leraS[[iera]]<-lera;
     }
@@ -83,23 +86,26 @@ f.prepPortData<-function(df.x.xts,freq,trainyears,testyears){
     v.etfRor.xts<-df.R.xts[,ncol(df.R.xts)]
     df.R.xts<-df.R.xts[,-ncol(df.R.xts)]
     stocks<-names(df.R.xts)
+    firstgraph<-max(firstSim-1,df.Eras$lTrno[[1]]);
     l.Res<-list(df.Eras=df.Eras, 
                 df.R.xts=df.R.xts,
                 v.dates=v.dates, 
                 stocks=stocks,
                 v.etfRor.xts=v.etfRor.xts,
-                fSimDate=v.dates[firstSim])
+                fSimDate=v.dates[firstSim],
+                fgraphDate=v.dates[firstgraph])
     #----
     return(l.Res);
 }    
+#######################################################################################
 f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     #-------Prepare Data----
     freq<-"months";
     trainyears<-2;
     testyears<-1;
-    l.Res<-f.prepPortData(df.x.xts,freq,trainyears,testyears)
+    l.Res   <-   f.prepPortData(df.x.xts,freq,trainyears,testyears)
     #names(l.Res)  "df.Eras"  "df.R.xts" "v.dates"
-    v.dates<-l.Res$v.dates;
+    v.dates    <-l.Res$v.dates;
     R.xts<-l.Res$df.R.xts;
     returns<-R.xts;
     df.Eras<-l.Res$df.Eras;
@@ -115,17 +121,14 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     names(df.ARB.xts)<-names(df.ARB)<-c("ETF","Port","difRor","CumETF","CumPort","difCumRor")
     iera<-0;
     #----
-    
-    
-    
-    ###################################################
-    suppressMessages(library(PortfolioAnalytics))
-    suppressMessages(library(foreach))
-    suppressMessages(library(iterators))
-    suppressMessages(library(ROI))
-    suppressMessages(library(ROI.plugin.quadprog))
-    suppressMessages(library(ROI.plugin.glpk))
-    
+###################################################
+    suppressMessages(library(PortfolioAnalytics));
+    suppressMessages(library(foreach));
+    suppressMessages(library(iterators));
+    suppressMessages(library(ROI));
+    suppressMessages(library(ROI.plugin.quadprog));
+    suppressMessages(library(ROI.plugin.glpk));
+#    Maximum Returns objective----
     
     # Create portfolio object
     portf_maxret <- portfolio.spec(assets=stocks)
@@ -135,7 +138,6 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     portf_maxret <- add.constraint(portfolio=portf_maxret, type="box",
                                    min=rep(0,numvars),
                                    max=rep(0.3,numvars))
-    
     # Add objective to the portfolio object
     portf_maxret <- add.objective(portfolio=portf_maxret, type="return", name="mean")
     print(portf_maxret)
@@ -144,7 +146,7 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     opt_maxret <- optimize.portfolio(R=returns, portfolio=portf_maxret, 
                                      optimize_method="ROI", trace=TRUE)
     print(opt_maxret)
-    print(opt_maxret)
+    
     summary(opt_maxret)
     names(opt_maxret)
     extractStats(opt_maxret)
@@ -156,7 +158,6 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
                                                 optimize_method="ROI", 
                                                 rebalance_on="quarters", 
                                               training_period=36)
-    outOfSample<-paste(v.dates[l.Res$df.Eras$fTsto[1]],"/",sep="");
     names(bt_maxret) 
     bt_maxret[[1]]
     bt_maxret$elapsed_time
@@ -164,17 +165,47 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     # bt_maxret$R
     #str(v$opt_rebalancing)
     #number of rebalances---------------
+    
+  l.opt_rebalancing <- bt_maxret$opt_rebalancing;  
+l.RES<-f.DisplayPortOpt(bt_maxret$opt_rebalancing,l.Res)
+    
+    
+f.DisplayPortOpt<-function(l.opt_rebalancing,l.Res){   
+    # fsimobs               # number of the observation where simulation can begin 
+    # nper                  # of rebalancing periods
+    # v.rebalancingdates    # vector of the rebalancing date
+    
+    nper                <-length(l.opt_rebalancing);
+    v.rebalancingdates  <-names(bt_maxret$opt_rebalancing);
+    fgraphdate             <-l.Res$fgraphDate;
+    fgraphspan          <-paste(fgraphdate,"/",sep="");
+    RG.xts<-l.Res$df.R.xts[fgraphspan]
+
+    
+    
+    
+    
+}    
+    
+    
     nper<-length( bt_maxret$opt_rebalancing)
-    v.rebalancingdates<-names(bt_maxret$opt_rebalancing)
+    
     pa<-paste(v.rebalancingdates[[1]],"/",sep="")
     fsimobs<-match(l.Res$fSimDate,v.dates)
     fgraphdate<-v.dates[fsimobs-1]
+    
     simSpan<-paste(l.Res$fSimDate,"/",sep="");
-    RG.xts<-R.xts[simSpan]
+    
     iper<-0;
     while(iper<nper){
         iper<-iper+1;
         l.or            <- bt_maxret$opt_rebalancing[[iper]];
+        if(iper==1){
+            fd<-as.Date(v.rebalancingdates[iper]);
+            idate<-match(fd,v.dates)
+            fgd<-v.dates[idate-1]
+            graphspan<-paste(fgd,"/",sep="");
+        }
         fd<-as.Date(v.rebalancingdates[iper]);
         ld<-as.Date(v.rebalancingdates[iper+1])-1;
         if(iper<nper){
@@ -194,7 +225,7 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     df.ARB.xts<-df.ARB%>%f.df2xts()
    
     plottitle=paste(df.dictentry$Description,"/3Y|1Q",sep="")
-    plot.xts(df.ARB.xts[pa,c("CumETF","CumPort")],legend.loc='left',main=plottitle);
+    plot.xts(df.ARB.xts[graphspan,c("CumETF","CumPort")],legend.loc='left',main=plottitle);
     
     
     

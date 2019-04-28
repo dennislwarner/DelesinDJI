@@ -42,6 +42,7 @@ file.exists(fnin)
 df.x<-read.csv(fnin)
 names(df.x)
 v.etfTickers<-c(targetETF,as.character(df.x$Identifier));
+v.goodSymbol<-v.etfTickers;
 df.x<-f.getETFpackage(v.etfTickers )
 
 fnout<-paste(dirPackages,"/",targetETF,"_P.csv",sep="");
@@ -75,17 +76,17 @@ df.ETFdict<-df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
 
 #work on the retail
 
-library(fPortfolio)
-library(PerformanceAnalytics)
-library(GA)
-library(PortfolioAnalytics)
-library(DEoptim)
-library(ROI)
-require(ROI.plugin.glpk)
-require(ROI.plugin.quadprog)
-library(psoptim)
-library(GenSA)
-library(foreach)
+suppressMessages(library(fPortfolio));
+suppressMessages(library(PerformanceAnalytics));
+suppressMessages(library(GA));
+suppressMessages(library(PortfolioAnalytics));
+suppressMessages(library(DEoptim));
+suppressMessages(library(ROI));
+suppressMessages(require(ROI.plugin.glpk));
+suppressMessages(require(ROI.plugin.quadprog));
+suppressMessages(library(psoptim));
+suppressMessages(library(GenSA));
+suppressMessages(library(foreach));
 registerDoSEQ()
 
 ietf<-12;
