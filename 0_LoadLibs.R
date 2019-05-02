@@ -11,7 +11,7 @@ suppressMessages(library(ff,quietly=TRUE,warn.conflicts=FALSE));
 suppressMessages(library(flexdashboard));
 suppressMessages(library(lubridate));
 suppressMessages(library(date));
-#suppressMessages(library(quantmod));
+suppressMessages(library(quantmod));
 suppressMessages(library(readr));
 suppressMessages(library(stringr));
 suppressMessages(library(tictoc));
@@ -27,7 +27,7 @@ suppressMessages(library(caTools));
 suppressMessages(library(qdapTools));
 suppressMessages(library(pryr));
 suppressMessages(library(abind));
-suppressMessages(library(formattable));
+#suppressMessages(library(formattable));
 suppressMessages(library(combinat));
 suppressMessages(library(htmltools));
 enableJIT(3)
@@ -36,9 +36,9 @@ enableJIT(3)
 suppressMessages(library(arrayhelpers));
 suppressMessages(library(PerformanceAnalytics));
 suppressMessages(library(modelr));
-#suppressMessages(library(randomForest));
-#suppressMessages(library(randomForestExplainer));
-#suppressMessages(library(randomForestSRC));
+suppressMessages(library(randomForest));
+suppressMessages(library(randomForestExplainer));
+suppressMessages(library(randomForestSRC));
 suppressMessages(library(party));
 suppressMessages(library(ggplot2));
 suppressMessages(library(gridExtra));
@@ -49,7 +49,13 @@ suppressMessages(library(rJava));
 suppressMessages(library(bartMachine));
 suppressMessages(library(robustHD));
 suppressMessages(library(xlsx));
-#suppressMessages(library(installr)
+suppressMessages(library(PortfolioAnalytics));
+suppressMessages(library(foreach));
+suppressMessages(library(iterators));
+suppressMessages(library(ROI));
+suppressMessages(library(ROI.plugin.quadprog));
+suppressMessages(library(ROI.plugin.glpk));
+#suppressMessages(library(installr));
 #check.for.updates.R()
 #install.R() 
 

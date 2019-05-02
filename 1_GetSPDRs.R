@@ -1,15 +1,22 @@
+#Start Me Up--------------------------------------------
 dirOneDrive         <-  "C:/Users/Denni/OneDrive";
 dirProject          <-  paste(dirOneDrive,"/DelesinDJI/DDJI",sep="");
-dirDDrive<-"D:/WarkleighD"       #Piasa Version
-dirData<-"D:/WarkleighD/WarkleighData";
+dirDDrive<-"W:/WarkleighD"       #Piasa Version
+dirDDrive<-"C:/Warner Share/WarkleighD"       #Piasa Version
+
+dirData<-paste(dirDDrive,"/WarkleighData",sep="");
+
 dirHoldings<-paste(dirDDrive,"/ETFHoldings",sep="");
 dirPackages<-paste(dirDDrive,"/ETFPackages",sep="");
 dirsupport<-paste(dirDDrive,"/ETFSupport",sep="");
 
-source(paste(dirProject, "/0_AllFunctions.R", sep = ""));
-source(paste(dirProject, "/0_EtfFunctions.R", sep = ""));
-source(paste(dirProject, "/0_BuildDJI.R", sep = ""));
 source(paste(dirProject, "/0_LoadLibs.R", sep = ""));
+
+source(paste(dirProject, "/0_AllFunctions.R", sep = ""));
+source(paste(dirProject, "/0b_EtfFunctions.R", sep = ""));
+source(paste(dirProject, "/0_MakePortfolios.R", sep = ""));
+source(paste(dirProject, "/0_BuildDJI.R", sep = ""));
+
 dirDocs             <-   paste(dirProject, "/Docs", sep = "");
 source(paste(dirProject,"/0_Prep.R",sep=""));
 
@@ -21,9 +28,9 @@ v.IndustryETFs<-c("XITK","XNTK","XAR","KBE","XBI",
                 "XWEB","XME","XES","XOP","XPH",
                 "KRE","XRT","XSD","XSW","XTH",
                 "XTL","XTN");
-df.shorts<-read.csv("Docs/Shorts.csv",stringsAsFactors = FALSE)
+df.shorts<-suppressMessages(read.csv("Docs/Shorts.csv",stringsAsFactors = FALSE));
 v.shorts<-names(df.shorts)
-df.EODTickers<-read.csv("Docs/EODTicker.csv",stringsAsFactors = FALSE)
+df.EODTickers<-suppressMessages(read.csv("Docs/EODTicker.csv",stringsAsFactors = FALSE));
 
 df.SectorETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.SectorETFS)
 df.BigETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.BigETFs)
@@ -31,8 +38,9 @@ df.IndustryETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.IndustryETFs)
 df.ShortsETFs<-df.EODTickers%>%dplyr::filter(Ticker %in% v.shorts)
 fnin<-paste(dirDocs,"/TargetDirectory.xlsx",sep="");
 df.TargetDirectoryETFs<-read.xlsx(fnin,sheetIndex = 1)
-
+#----
 #Begin analysis
+# Get a Price dataset for a partcular ETF for which we have holdings data----
 targetETF<-"XHS";
 v.etf<-df.SectorETFs%>%dplyr::filter(Ticker=="targetETF")
 #df.ETFdict<-df.EODTickers%>%dplyr::filter(Ticker %in% v.)
@@ -47,7 +55,9 @@ df.x<-f.getETFpackage(v.etfTickers )
 
 fnout<-paste(dirPackages,"/",targetETF,"_P.csv",sep="");
 write.csv(df.x,file=fnout);
+#----
 v.holdings<-list.files(dirHoldings,include.dirs=FALSE)
+#----Build Price datasets for each ETF fow which we have holdings data----
 tic();
 ihold<-0;
 while(ihold<length(v.holdings)){
@@ -68,13 +78,12 @@ while(ihold<length(v.holdings)){
     fnout<-paste(dirPackages,"/",etf,"_P.xts",sep="");
     save(df.x.xts,file=fnout)
     cat(ihold,etf,"---",etfCO$Name,"#Companies = ",nrow(df.CO)-1,"\n");
-   
 }
-
+#----
 v.ETFs<-str_sub(v.holdings,1,-7)
 df.ETFdict<-df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
 
-#work on the retail
+#work on the portfolio trackinig
 
 suppressMessages(library(fPortfolio));
 suppressMessages(library(PerformanceAnalytics));
@@ -87,6 +96,7 @@ suppressMessages(require(ROI.plugin.quadprog));
 suppressMessages(library(psoptim));
 suppressMessages(library(GenSA));
 suppressMessages(library(foreach));
+suppressMessages(library(tidyquant));
 registerDoSEQ()
 
 ietf<-12;
