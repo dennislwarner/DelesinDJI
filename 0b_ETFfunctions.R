@@ -83,6 +83,7 @@ f.prepPortData<-function(df.x.xts,freq,`trainyears`,testyears){
     
     firstgraph<-max(firstSim-1,df.Eras$lTrno[[1]]);
     l.Res<-list(df.Eras=df.Eras, 
+                df.x.xts=df.x.xts,
                 df.R.xts=df.R.xts,
                 numEras=nrow(df.Eras),
                 v.dates=v.dates, 
@@ -97,6 +98,26 @@ f.prepPortData<-function(df.x.xts,freq,`trainyears`,testyears){
     return(l.Res);
 }    
 #######################################################################################
+f.process2<-function(df.x.xts,df.dictentry){
+    #----Prepare for PortfolioAnalytics package use----
+    freq<-"months";
+    trainyears<-2;
+    testyears<-1;
+    l.PortData   <-   f.prepPortData(df.x.xts,freq,trainyears,testyears);
+    v.eop      <- endpoints(l.PortData$df.x.xts,on=freq);
+    df.z.xts   <- l.PortData$df.x.xts[v.eop,];
+    df.z       <- f.xts2df(df.z.xts)
+    v.dates    <- df.z$Date; 
+    returns   <-Return.calculate(df.z.xts,method='log');
+    returns[is.na(returns)]<-0;
+    sreturns<-returns[,-ncol(returns)]
+    stocks<-names(sreturns);
+    
+    
+    
+    
+    
+}
 f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     #-------Prepare Data----
     freq<-"months";
@@ -104,13 +125,39 @@ f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     testyears<-1;
     l.PortData   <-   f.prepPortData(df.x.xts,freq,trainyears,testyears);
    
+    q_portf <- portfolio.spec(assets=stocks);
+    fi_constr <- weight_sum_constraint(type="full_investment");
+    lo_constr <- box_constraint(type="long_only", assets=q_portf$assets);
+    qu_constr <- list(fi_constr, lo_constr);
+    
+    ret_obj <- return_objective(name="mean");
+    var_obj <- portfolio_risk_objective(name="var", risk_aversion=0.25);
+    qu_obj <- list(ret_obj, var_obj);
+    
+    opt_qu <- optimize.portfolio(R=sreturns, portfolio=q_portf, 
+                                 constraints=qu_constr, 
+                                 objectives=qu_obj, 
+                                 optimize_method="ROI",
+                                 trace=TRUE);
+    rb_qu <- optimize.portfolio.rebalancing(R=returns, portfolio=q_portf,
+                                            constraints=qu_constr, 
+                                            objectives=qu_obj, 
+                                            optimize_method="ROI", 
+                                            rebalance_on="quarters", 
+                                            training_period=36)
+    
+    
 ###################################################
     l.PortModels<-list();
 #    Maximum Returns objective----
     
     # Create portfolio object
-    portName<-"MaxRet";
-    l.opt_rebalancing<-f.make_MaxRet(portName,l.PortData,rebalFreq="months");
+    portName<-"MeanVar";
+
+    l.opt_rebalancing<-f.make_Opt(portName,l.PortData,rebalFreq="years",objType="risk",objName="var");
+    
+    
+    
     l.PortRes<-f.DisplayPortOpt(l.opt_rebalancing,l.PortData);
     l.PortModels[[portName]]<-l.PortRes;
     
@@ -147,11 +194,17 @@ f.DisplayPortOpt<-function(l.opt_rebalancing,l.PortData){
       iper             <- iper+1;
       m.weights[iper,] <- l.opt_rebalancing[[iper]]$weights
     }
+    m.weights[is.na(m.weights)]<-0.0;
     colnames(m.weights) <- v.varnames
     m.weights.xts       <- as.xts(m.weights,order.by = v.rebalancingdates)
     r.xts               <- l.PortData$df.R.xts;
-    l.port      <-Return.portfolio(r.xts, weights=m.weights.xts,wealth.index=TRUE,
-                             contribution=TRUE,verbose=TRUE)
+    
+    df.x.xts<-l.PortData$df.x.xts[v.rebalancingdates,1:nvar]
+    returns<-Return.calculate(df.x.xts,method='log')
+    returns[is.na(returns)]<-0
+   Return.portfolio(returns,m.weights.xts)
+    l.port      <-Return.rebalancing(returns, weights=m.weights.xts,wealth.index=TRUE,
+                             verbose=TRUE )
     plot.xts( l.port$wealthindex)
     #l.port$returns
     #[1] "returns"      "contribution" "BOP.Weight"   "EOP.Weight"  
