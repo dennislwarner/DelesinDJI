@@ -47,7 +47,13 @@ f.getETFpackage <- function(v.goodSymbol) {
     for (it in c(1:length(v.goodSymbol))) {
         itick <- v.goodSymbol[it]
         #get adjusted close..................
-        fn <- paste("EOD/",itick, ".11", sep = "")
+        if(str_sub(itick,1,3)=="EOD"){
+            fn <- paste(itick, ".11", sep = "")
+        }else{
+            fn <- paste("EOD/",itick, ".11", sep = "")
+        }
+        
+        # fn<-paste("EOD/",itick,sep="");
         df.cl.xts <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
                         type = "xts", start_date = "2003-01-01")
         if(it==1){

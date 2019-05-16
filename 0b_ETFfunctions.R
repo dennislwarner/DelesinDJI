@@ -90,7 +90,7 @@ f.prepPortData<-function(df.x.xts,freq,`trainyears`,testyears){
                 numobs=length(v.dates),
                 stocks=stocks,
                 numvars=length(stocks),
-                v.etf.xts=v.etf,
+                v.etf.xts=v.etf.xts,
                 v.etfRor.xts=v.etfRor.xts,
                 fSimDate=v.dates[firstSim],
                 fgraphDate=v.dates[firstgraph])
@@ -104,6 +104,31 @@ f.process2<-function(df.x.xts,df.dictentry){
     trainyears<-2;
     testyears<-1;
     l.PortData   <-   f.prepPortData(df.x.xts,freq,trainyears,testyears);
+    #---construct portfolio object
+    q_portf <- portfolio.spec(assets=l.PortData$stocks);
+    fi_constr <- weight_sum_constraint(type="full_investment");
+    lo_constr <- box_constraint(type="long_only", assets=q_portf$assets);
+    qu_constr <- list(fi_constr, lo_constr);
+    ret_obj   <- return_objective(name="mean");
+    var_obj   <- portfolio_risk_objective(name="var", risk_aversion=0.25);
+    qu_obj    <- list(ret_obj, var_obj);
+    #--- Optimize the object over the entire period
+    opt_qu <- optimize.portfolio(R=l.PortData$df.R.xts, portfolio=q_portf, 
+                                 constraints=qu_constr, 
+                                 objectives=qu_obj, 
+                                 optimize_method="ROI",
+                                 trace=TRUE);
+    rb_qu <- optimize.portfolio.rebalancing(R=l.PortData$df.R.xts, 
+                                            portfolio=q_portf,
+                                            constraints=qu_constr, 
+                                            objectives=qu_obj, 
+                                            optimize_method="ROI", 
+                                            rebalance_on="quarters" )
+    
+    
+    
+    
+    
     v.eop      <- endpoints(l.PortData$df.x.xts,on=freq);
     df.z.xts   <- l.PortData$df.x.xts[v.eop,];
     df.z       <- f.xts2df(df.z.xts)
@@ -120,31 +145,39 @@ f.process2<-function(df.x.xts,df.dictentry){
 }
 f.ProcessEstimates<-function(df.x.xts,df.dictentry){
     #-------Prepare Data----
+    #  l.PortData   list holding all data prepared for estimation and simulation
+    #[1] "df.Eras"  each row/era contains   fTrno lTrno fTsto lTsto TrnSpan   TstSpan 
+    #"df.x.xts"     the price array, daily
+    #"df.R.xts"     the period rates of return at 'freq'  e.g. "weekly","monthly", etc
+    #"numEras"      # of eras
+    #"v.dates"      vector of dates of each 'era'freq' observation
+    #"numobs"       length of v.dates
+    #"stocks"       ikers of components with ticker of ETF as last element
+    #"numvars"      number of component stocks
+    #"v.etf.xts"    
+    #"v.etfRor.xts" 
+    #"fSimDate"     
+    #"fgraphDate"  
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #-----------------------------------------------------------------------------
+    
+    
     freq<-"months";
     trainyears<-2;
     testyears<-1;
     l.PortData   <-   f.prepPortData(df.x.xts,freq,trainyears,testyears);
    
-    q_portf <- portfolio.spec(assets=stocks);
-    fi_constr <- weight_sum_constraint(type="full_investment");
-    lo_constr <- box_constraint(type="long_only", assets=q_portf$assets);
-    qu_constr <- list(fi_constr, lo_constr);
     
-    ret_obj <- return_objective(name="mean");
-    var_obj <- portfolio_risk_objective(name="var", risk_aversion=0.25);
-    qu_obj <- list(ret_obj, var_obj);
     
-    opt_qu <- optimize.portfolio(R=sreturns, portfolio=q_portf, 
-                                 constraints=qu_constr, 
-                                 objectives=qu_obj, 
-                                 optimize_method="ROI",
-                                 trace=TRUE);
-    rb_qu <- optimize.portfolio.rebalancing(R=returns, portfolio=q_portf,
-                                            constraints=qu_constr, 
-                                            objectives=qu_obj, 
-                                            optimize_method="ROI", 
-                                            rebalance_on="quarters", 
-                                            training_period=36)
     
     
 ###################################################

@@ -38,8 +38,7 @@ f.make_MaxRandomRet<-function(portname,l.PortData,rebalFreq="quarters"){
     #              chart.assets=TRUE, xlim=c(0.01, 0.18), main="Maximum Return")
     bt_maxret <- optimize.portfolio.rebalancing(R=returns, portfolio=portf_maxret,
                                                 optimize_method="ROI", 
-                                                rebalance_on=rebalFreq, 
-                                                training_period=36);
+                                                rebalance_on=rebalFreq);
     return(bt_maxret$opt_rebalancing)
     
 }
@@ -47,18 +46,11 @@ f.make_Opt<-function(portname,l.PortData,rebalFreq="quarters",objType="risk",obj
     # Build a maximum RoR  portfolio
     #names(l.PortData)
     #"df.Eras" ,"df.R.xts","v.dates", "stocks","v.etf.xts","v.etfRor.xts","fSimDate","fgraphDate"  
-    freq<-"months";
-        
-    
-    v.eop      <- endpoints(l.PortData$df.x.xts,on=freq);
-    df.z.xts   <- l.PortData$df.x.xts[v.eop,];
-    df.z       <- f.xts2df(df.z.xts)
-    v.dates    <- df.z$Date; 
-    returns   <-Return.calculate(df.z.xts,method='log');
-    
+
+    returns<-l.PortData$df.R.xts
     returns[is.na(returns)]<-0;
     sreturns<-returns[,-ncol(returns)]
-    stocks<-names(returns)[-1]
+    stocks<-l.PortData$stocks;
     
     portf_m <- portfolio.spec(assets=l.PortData$stocks);
     # portf_maxret <- add.constraint(portfolio=portf_maxret, type="full_investment")
@@ -92,8 +84,7 @@ f.make_Opt<-function(portname,l.PortData,rebalFreq="quarters",objType="risk",obj
                                                 portfolio=portf_m,
                                                 optimize_method="ROI",
                                                 rebalance_on=rebalFreq,
-                                                trace=TRUE,
-                                                training_period=36);
+                                                trace=TRUE);
     return(bt_maxt$opt_rebalancing)
     
 }

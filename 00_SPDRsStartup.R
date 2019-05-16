@@ -1,16 +1,28 @@
-dirDDrive<-"W:/WarkleighD"       #Piasa Version
-dirDDrive<-"C:/Warner Share/WarkleighD"       #Piasa Version
-dirDDrive<-"D:/Warner Share/WarkleighD"       #Piasa Version
+#-----------------------------------------------------------------------------|
+#                                                                             |
+#    Prepare the directory structures, Load the functions and Load startup    |
+#    data and parameters for the SPDR / ETF project                           |
+#                                                                             |
+#    DLW 5/14/2019                                                            |
+#                                                                             |
+#-----------------------------------------------------------------------------|
 
-dirData<-paste(dirDDrive,"/WarkleighData",sep="");
+dirDDrive       <- "D:/WarkleighD";
+dirData         <- paste(dirDDrive,"/WarkleighData",sep="");
 
-dirHoldings<-paste(dirDDrive,"/ETFHoldings",sep="");
+dirHoldings     <- paste(dirDDrive,"/ETFHoldings",sep="");
+length(list.files(dirHoldings));
+
 dirPackages<-paste(dirDDrive,"/ETFPackages",sep="");
-dirsupport<-paste(dirDDrive,"/ETFSupport",sep="");
+length(list.files(dirHoldings));
+
+dirSupport<-paste(dirDDrive,"/ETFSupport",sep="");
+length(list.files(dirSupport))
 
 source(paste(dirProject, "/0_LoadLibs.R", sep = ""));
-
+length(search());
 source(paste(dirProject, "/0_AllFunctions.R", sep = ""));
+
 source(paste(dirProject, "/0b_EtfFunctions.R", sep = ""));
 source(paste(dirProject, "/0_MakePortfolios.R", sep = ""));
 source(paste(dirProject, "/0_BuildDJI.R", sep = ""));

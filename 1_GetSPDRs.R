@@ -29,6 +29,18 @@ suppressMessages(library(iterators));
 suppressMessages(library(tidyquant));
 registerDoSEQ()
 #----
+#------------------------------------------------------------------------------|
+#   v.holdings   names of files of holdings  e.g. "DIA_H.csv"
+#   v.ETFs       Eod stock symbols for the coresponding ETF e.g. "DIA"
+#   df.ETFdict   data frame with (Ticker, Quandl_Code Name Exchange LTDate etc)
+#   df.dictentry df row for a particular ETF
+#   symb         ticker symbol for a particular etf  , an element of v.ETFs
+#   df.x.xts     data frame of prices of components with price of ETF in last column
+#   l.RES        list of results returned from the estimation routine
+#
+#-----------------------------------------------------------------------------|
+
+
 v.holdings    <- list.files(dirHoldings,include.dirs=FALSE);
 v.ETFs        <- str_sub(v.holdings,1,-7)
 df.ETFdict    <- df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
@@ -38,15 +50,17 @@ df.dictentry<-df.TargetDirectoryETFs[ietf,]
 symb<-str_sub(df.dictentry$ETF,1,-3)
 fnin<-paste(dirPackages,"/",symb,"_P.xts",sep="")
 ss_df.x.xts<-load(fnin)
+names(df.x.xts)<-str_sub(names(df.x.xts),5,); #correct this in the 00_BuildHoldingsFiles.R file
 
 #ensure coloumns are in required order, where the target etf is the last column
+#  Should move to the the 00_BuildHoldingsFiles.R above----
 df.x<-f.xts2df(df.x.xts)
 v.target<-df.x[,symb]
 df.xx<-df.x%>%dplyr::select(-symb)
 df.xx<-data.frame(df.xx,v.target);names(df.xx)[ncol(df.xx)]<-symb
 df.x.xts<-df.xx%>%f.df2xts()
 M<-ncol(df.x.xts)
-
+#----
 
 l.Res<-f.ProcessEstimates(df.x.xts,df.dictentry)
 
