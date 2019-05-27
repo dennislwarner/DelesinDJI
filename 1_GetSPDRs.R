@@ -44,7 +44,7 @@ registerDoSEQ()
 v.holdings    <- list.files(dirHoldings,include.dirs=FALSE);
 v.ETFs        <- str_sub(v.holdings,1,-7)
 df.ETFdict    <- df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
-ietf<-12;
+ietf<-11;
 df.TargetDirectoryETFs$ETF<-as.character(df.TargetDirectoryETFs$ETF)
 df.dictentry<-df.TargetDirectoryETFs[ietf,]
 symb<-str_sub(df.dictentry$ETF,1,-3)
@@ -62,6 +62,12 @@ df.x.xts<-df.xx%>%f.df2xts()
 M<-ncol(df.x.xts)
 #----
 
-l.Res<-f.ProcessEstimates(df.x.xts,df.dictentry)
+#l.Res<-f.ProcessEstimates(df.x.xts,df.dictentry)
+
+source("0_fPortfolioFunctions.R",echo=FALSE);
+l.Res<-f.fPortfolioEstimates(df.x.xts,df.dictentry);
+
+
+
 
 

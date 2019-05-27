@@ -34,7 +34,7 @@ f.prepPortData<-function(df.x.xts,freq,`trainyears`,testyears){
     testperiods<-obsperyear*testyears;
     v.eop      <- endpoints(df.x.xts,on=freq)
     df.z.xts   <- df.x.xts[v.eop,];
-    df.z       <- f.xts2df(df.z.xts)
+    df.z       <- f.xts2df(df.z.xts); #data frame of all data, (target ETF in last column)
     v.dates    <- df.z$Date;
     v.etf.xts  <- df.z.xts[,ncol(df.z.xts)]
     #----
@@ -76,7 +76,7 @@ f.prepPortData<-function(df.x.xts,freq,`trainyears`,testyears){
     v.etfRor.xts<-r.xts[,ncol(r.xts)];
     df.R.xts<-r.xts[,-ncol(r.xts)];
     stocks<-names(df.R.xts)
-    df.R.xts[is.na(df.R.xts)]<-0;
+    df.R.xts[is.na(df.R.xts)]<-0;  #periodic rates of return for all variables(including target ETF)
     #----
     #Build Ror matrix for use in portfolio optimizations----
  
@@ -98,6 +98,43 @@ f.prepPortData<-function(df.x.xts,freq,`trainyears`,testyears){
     return(l.Res);
 }    
 #######################################################################################
+f.showopt<-function(r,l.PortData){
+    stime<-paste("time ",round(r$elapsed_time,digits=2),sep="");
+    rbal<-r$opt_rebalancing; 
+    nper<-length(rbal)
+    v.dat<-names(rbal)
+    nvar<-ncol(r$R);
+    iper<-0;
+    cash<-1000000;
+    #get the etf prices for the rebalancing dates
+    v.p<-l.PortData$v.etf.xts
+    v.prel<-v.p[v.dat]
+    v.etfror<-Return.calculate(v.prel);
+    v.etfror[is.na(v.etfror)]<-0;
+    m.res<-matrix(0,nper,11);
+    colnames(m.res)<-c("date","r","stdv","fit","portRoR","etfRoR","","","","","")
+    df.res<-data.frame(m.res)
+    #loop across allrebalancing periods,  keep track of trading results
+    iper<-0;
+    wealth<-cash;
+    v.curweights<-numeric(nvar);
+    while(iper<nper){
+        iper<-iper+1;
+        cat(iper,"\n")
+        cbal<-rbal[[iper]];
+        curdate<-v.dat[iper];
+        v.ror<-l.PortData$df.R.xts[curdate,]
+        portror<-v.curweights%*%t(v.ror)
+        df.res[iper,"date"]<-curdate
+        df.res[iper,"portRoR"]<-portror;
+        df.res[iper,"etfRoR"]<-v.etfror[curdate];
+        #load the weights for the next period
+        v.curweights<-cbal$weights
+        
+    }
+    
+    return(df.res);
+}
 f.process2<-function(df.x.xts,df.dictentry){
     #----Prepare for PortfolioAnalytics package use----
     freq<-"months";
@@ -110,23 +147,80 @@ f.process2<-function(df.x.xts,df.dictentry){
     lo_constr <- box_constraint(type="long_only", assets=q_portf$assets);
     qu_constr <- list(fi_constr, lo_constr);
     ret_obj   <- return_objective(name="mean");
-    var_obj   <- portfolio_risk_objective(name="var", risk_aversion=0.25);
+    var_obj   <- portfolio_risk_objective(name="var", risk_aversion=0.75);
     qu_obj    <- list(ret_obj, var_obj);
+    
+    library(pso)
+    nvar<-ncol(df.x.xts)
+    itmax=nvar*100;
     #--- Optimize the object over the entire period
-    opt_qu <- optimize.portfolio(R=l.PortData$df.R.xts, portfolio=q_portf, 
+    opt_qu <- optimize.portfolio(R=l.PortData$df.R.xts, 
+                                 portfolio=q_portf, 
                                  constraints=qu_constr, 
                                  objectives=qu_obj, 
-                                 optimize_method="ROI",
-                                 trace=TRUE);
-    rb_qu <- optimize.portfolio.rebalancing(R=l.PortData$df.R.xts, 
+                                 
+                                 optimize_method="pso",
+                                 trace=TRUE,
+                                 itermax=itmax);
+    lquad05<-opt_qu
+    targetstd<-std(l.PortData$v.etfRor.xts)
+
+    q_portf <- portfolio.spec(assets=l.PortData$stocks);
+    fi_constr <- weight_sum_constraint(type="full_investment");
+    lo_constr <- box_constraint(type="long_only", assets=q_portf$assets);
+    
+    qu_constr <- list(fi_constr, lo_constr);
+    ret_obj   <- return_objective(name="mean");
+    var_obj   <- portfolio_risk_objective(name="var", risk_aversion=0.75);
+    qu_obj    <- list(ret_obj, var_obj);
+    
+    
+    
+    
+    opt_qu <- optimize.portfolio(R=l.PortData$df.R.xts, 
+                                 portfolio=q_portf, 
+                                 constraints=qu_constr, 
+                                 objectives=qu_obj, 
+                                 
+                                 optimize_method="pso",
+                                 trace=TRUE,
+                                 itermax=itmax);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+        
+    df.RR.xts<-l.PortData$df.R.xts['2013/2019']
+    rb_qu5 <- optimize.portfolio.rebalancing(R=df.RR.xts, 
                                             portfolio=q_portf,
                                             constraints=qu_constr, 
                                             objectives=qu_obj, 
-                                            optimize_method="ROI", 
-                                            rebalance_on="quarters" )
+                                            optimize_method="pso", 
+                                            rebalance_on="years" )
     
     
+     r25<-rb_qu5
+    l.rb3<-rb_qu$opt_rebalancing
     
+    rb_qu3<-rb_qu
+    r<-rb_qu3
+    dfres3<-f.showopt(rb_qu3,l.PortData)
+    r<-rb_qu5
+    dfres5<-f.showopt(rb_qu5,l.PortData)
+   
+    
+    class(r$opt_rebalancing)
     
     
     v.eop      <- endpoints(l.PortData$df.x.xts,on=freq);
@@ -211,65 +305,82 @@ PCvbar<-charts.BarVaR(df.xts, main = "Returns", cex.legend = 0.8, colorset = 1:1
     
     return(l.PortRes)
 }   
-f.DisplayPortOpt<-function(l.opt_rebalancing,l.PortData){   
-    # fsimobs               # number of the observation where simulation can begin 
-    # nper                  # of rebalancing periods
-    # v.rebalancingdates    # vector of the rebalancing date
-    
-    nper                <- length(l.opt_rebalancing);
-    v.rebalancingdates  <- as.Date(names(l.opt_rebalancing));
-    v.varnames          <- names(l.opt_rebalancing[[1]]$weights);
-    nvar                <- length(l.opt_rebalancing[[1]]$weights);
-    #get matrix of rebalancing weights---
-    m.weights     <-matrix(0,nper,nvar)
-    iper<-0;
-    while(iper<nper){
-      iper             <- iper+1;
-      m.weights[iper,] <- l.opt_rebalancing[[iper]]$weights
-    }
-    m.weights[is.na(m.weights)]<-0.0;
-    colnames(m.weights) <- v.varnames
-    m.weights.xts       <- as.xts(m.weights,order.by = v.rebalancingdates)
-    r.xts               <- l.PortData$df.R.xts;
-    
-    df.x.xts<-l.PortData$df.x.xts[v.rebalancingdates,1:nvar]
-    returns<-Return.calculate(df.x.xts,method='log')
-    returns[is.na(returns)]<-0
-   Return.portfolio(returns,m.weights.xts)
-    l.port      <-Return.rebalancing(returns, weights=m.weights.xts,wealth.index=TRUE,
-                             verbose=TRUE )
-    plot.xts( l.port$wealthindex)
-    #l.port$returns
-    #[1] "returns"      "contribution" "BOP.Weight"   "EOP.Weight"  
-   # [5] "BOP.Value"    "EOP.Value"    "wealthindex" 
-    fgraphdate             <-l.PortData$fgraphDate;
-    fgraphspan          <-paste(fgraphdate,"/",sep="");
-    df.xts<-merge.xts(l.port$returns,l.PortData$v.etfRor.xts,join='left');
-    names(df.xts)[[1]]<-"Port";
-    PC<-suppressMessages(charts.PerformanceSummary(df.xts, Rf = 0/03, main = NULL, geometric = TRUE,
-                              methods = "ModifiedVaR", width = 4, event.labels = NULL, ylog = FALSE,
-                              wealth.index = TRUE, gap = 12, begin = c("first", "axis"),
-                              legend.loc = "topleft", p = 0.95));
-    PCvbar<-charts.BarVaR(df.xts, main = "Returns", cex.legend = 0.8, colorset = 1:12,
-                  ylim = NA,  perpanel = NULL, show.yaxis = c("all", "firstonly",
-                                                                  "alternating", "none"))
-    CR<-table.CalendarReturns(df.xts)
-    # textplot(format.df(CR, na.blank=TRUE, numeric.dollar=FALSE, 
-    #                    cdec=rep(1,dim(CR)[2])), rmar = 0.8, cmar = 1,  
-    #          max.cex=.9, halign = "center", valign = "top", 
-    #          row.valign="center", wrap.rownames=20, wrap.colnames=10, 
-    #          col.rownames=c( rep("darkgray",12), "black", "blue"), 
-    #          mar = c(0,0,3,0)+0.1)
-    library(Hmisc)
-    TS<-table.Stats(df.xts)
-    TO<-table.ProbOutPerformance(df.xts[,1],df.xts[,ncol(df.xts)])
-    TD<-table.Distributions(df.xts);
-    TDD<-table.Drawdowns(df.xts);
-    TRP<-table.RollingPeriods(df.xts);
-    TSFM<-table.SFM(df.xts[,1],df.xts[,2])
-    l.PortResults<-list(df.xts=df.xts,StatsTable=TS,PrfCharts=PC ,BarChart=PCvbar,ToutPerf=TO,TDrawDowns=TDD,RollPer=TRP,SFM=TSFM);
-    return(l.PortResults);
-}    
+# f.DisplayPortOpt<-function(l.opt_rebalancing,l.PortData){   
+#     # fsimobs               # number of the observation where simulation can begin 
+#     # nper                  # of rebalancing periods
+#     # v.rebalancingdates    # vector of the rebalancing date
+#     
+#     nper                <- length(l.opt_rebalancing);
+#     v.rebalancingdates  <- as.Date(names(l.opt_rebalancing));
+#     v.varnames          <- names(l.opt_rebalancing[[1]]$weights);
+#     nvar                <- length(l.opt_rebalancing[[1]]$weights);
+#     #get matrix of rebalancing weights---
+#     m.weights     <-matrix(0,nper,nvar)
+#     iper<-0;
+#     while(iper<nper){
+#       iper             <- iper+1;
+#       m.weights[iper,] <- l.opt_rebalancing[[iper]]$weights
+#     }
+#     m.weights[is.na(m.weights)]<-0.0;
+#     colnames(m.weights) <- v.varnames
+#     m.weights.xts       <- as.xts(m.weights,order.by = v.rebalancingdates)
+#     r.xts               <- l.PortData$df.R.xts;
+#     
+#     df.x.xts<-l.PortData$df.x.xts[v.rebalancingdates,1:nvar]
+#     returns<-Return.calculate(df.x.xts,method='log')
+#     
+#     returns[is.na(returns)]<-0
+#     m.returns<-coredata(returns)
+#     m.weights<-coredata(m.weights.xts)
+#     
+#   #  v.r<-m.returns%*%t(m.weights)
+#  #  Return.portfolio(returns,m.weights.xts)
+#    
+#    m.w<-coredata(m.weights.xts);
+#    m.r<-coredata(returns);
+#    v.portR<-rowSums(m.r*m.w);
+#    v.portR.xts<-as.xts(v.portR,order.by=index(returns))
+#    v.wealth.xts<-cumsum(v.portR.xts)+1
+#    
+#    
+#     l.port      <- Return.rebalancing(returns,
+#                                       weights=m.weights.xts,
+#                                       wealth.index=TRUE,
+#                                       verbose=TRUE )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   , weights=m.weights.xts,wealth.index=TRUE,
+#                              
+# 
+#     plot.xts( l.port$wealthindex)
+#     #l.port$returns
+#     #[1] "returns"      "contribution" "BOP.Weight"   "EOP.Weight"  
+#    # [5] "BOP.Value"    "EOP.Value"    "wealthindex" 
+#     fgraphdate             <-l.PortData$fgraphDate;
+#     fgraphspan          <-paste(fgraphdate,"/",sep="");
+#     df.xts<-merge.xts(l.port$returns,l.PortData$v.etfRor.xts,join='left');
+#     names(df.xts)[[1]]<-"Port";
+#     PC<-suppressMessages(charts.PerformanceSummary(df.xts, Rf = 0/03, main = NULL, geometric = TRUE,
+#                               methods = "ModifiedVaR", width = 4, event.labels = NULL, ylog = FALSE,
+#                               wealth.index = TRUE, gap = 12, begin = c("first", "axis"),
+#                               legend.loc = "topleft", p = 0.95));
+#     PCvbar<-charts.BarVaR(df.xts, main = "Returns", cex.legend = 0.8, colorset = 1:12,
+#                   ylim = NA,  perpanel = NULL, show.yaxis = c("all", "firstonly",
+#                                                                   "alternating", "none"))
+#     CR<-table.CalendarReturns(df.xts)
+#     # textplot(format.df(CR, na.blank=TRUE, numeric.dollar=FALSE, 
+#     #                    cdec=rep(1,dim(CR)[2])), rmar = 0.8, cmar = 1,  
+#     #          max.cex=.9, halign = "center", valign = "top", 
+#     #          row.valign="center", wrap.rownames=20, wrap.colnames=10, 
+#     #          col.rownames=c( rep("darkgray",12), "black", "blue"), 
+#     #          mar = c(0,0,3,0)+0.1)
+#     library(Hmisc)
+#     TS<-table.Stats(df.xts)
+#     TO<-table.ProbOutPerformance(df.xts[,1],df.xts[,ncol(df.xts)])
+#     TD<-table.Distributions(df.xts);
+#     TDD<-table.Drawdowns(df.xts);
+#     TRP<-table.RollingPeriods(df.xts);
+#     TSFM<-table.SFM(df.xts[,1],df.xts[,2])
+#     l.PortResults<-list(df.xts=df.xts,StatsTable=TS,PrfCharts=PC ,BarChart=PCvbar,ToutPerf=TO,TDrawDowns=TDD,RollPer=TRP,SFM=TSFM);
+#     return(l.PortResults);
+# }    
         # 
         # 
         # tq_mutate(df,cx=diff(XLU))

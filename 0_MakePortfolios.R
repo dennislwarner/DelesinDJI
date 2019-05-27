@@ -53,20 +53,20 @@ f.make_Opt<-function(portname,l.PortData,rebalFreq="quarters",objType="risk",obj
     stocks<-l.PortData$stocks;
     
     portf_m <- portfolio.spec(assets=l.PortData$stocks);
-    # portf_maxret <- add.constraint(portfolio=portf_maxret, type="full_investment")
+   portf_m <- add.constraint(portfolio=portf_m, type="full_investment")
     
-    portf_m<-add.constraint(portfolio=portf_m,
-                            type="weight_sum",
-                            min_sum=0.99,
-                            max_sum=1.01)
+    # portf_m<-add.constraint(portfolio=portf_m,
+    #                         type="weight_sum",
+    #                         min_sum=0.99,
+    #                         max_sum=1.01)
     portf_m <- add.constraint(portfolio=portf_m, 
                               type="box",
                               min=rep(0,l.PortData$numvars),
-                              max=rep(0.3,l.PortData$numvars));
-    portf_m <- add.constraint(portfolio=portf_m, type="return", return_target=mean(colMeans(returns)))
+                              max=rep(0.2,l.PortData$numvars));
+    #portf_m <- add.constraint(portfolio=portf_m, type="return", return_target=mean(colMeans(returns)))
     portf_m <- add.objective(portfolio=portf_m, 
-                             type=objType, 
-                             name=objName);
+                             type='quadratic_utility', 
+                            risk_aversion=0.750);
     
    #  opt_pROI <- optimize.portfolio(R=returns, portfolio=portf_m, 
    #                                   optimize_method="ROI", trace=TRUE)
