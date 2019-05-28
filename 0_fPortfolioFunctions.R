@@ -36,7 +36,7 @@ f.fPortfolioEstimates<-function(df.x.xts,df.dictentry){
     #drawdownstats
     EQIX<-df.cr.ts[,"EQIX"];
     dd<-drawdowns(EQIX)
-    ds<-drawdownsStats(EQIX);
+    #ds<-drawdownsStats(dd);
     EQIX.LW<-lowess(EQIX,f=0.03);
     plot(EQIX)
     lines(EQIX.LW,col="brown",lwd=2);
@@ -65,9 +65,9 @@ f.fPortfolioEstimates<-function(df.x.xts,df.dictentry){
     covRisk(100*df.ra.ts[,1:3], weights = c(1, 1, 1)/3)
     # for value at risk
     varRisk(100*df.ra.ts[,1:3], weights = c(1, 1, 1)/3, alpha = 0.05)
-    VaR.5%
+    
     # for conditional value at risk
-    -0.56351
+   
     cvarRisk(100*df.ra.ts[,1:3], weights = c(1, 1, 1)/3, alpha = 0.05)
     CVaR.5%
     #can apply anty function across the columns, e.g.
@@ -105,9 +105,137 @@ f.fPortfolioEstimates<-function(df.x.xts,df.dictentry){
    
    #Customizing Plots
    seriesPlot(df.cr.ts[,2])
+   SBAC<-df.cr.ts[,2];
+   seriesPlot(SBAC, title = FALSE)
+   title(main = "SBACt", xlab = "", ylab = "Index")
+   text(as.POSIXct("2006-11-25"), rev(SBAC)[1], as.character(rev(SBAC)[1]),
+          font = 2)
+   mtext("Source: SWX", side = 4, col = "grey", adj = 0, cex = 0.7); #"Margin text strings"
+   #Decorating the plot
+  seriesPlot(SBAC, title = FALSE)
+  title(main = "SBAC Performance Index", xlab = "", ylab = "SBAC Index")
+  text(as.POSIXct("2006-11-25"), rev(SBAC)[1], as.character(rev(SBAC)[1]),
+          font = 2)
+   mtext("Source: SBC", side = 4, col = "grey", adj = 0, cex = 0.7)
+   #more decorations
+   seriesPlot(SBAC, grid = FALSE, box = FALSE, rug = FALSE)
+   hgrid()
+   boxL()
+   copyright()
+   abline(h = 350, col = "orange")
+   #------------------------------------------------------------------------------------------
+   #   Modelling Asset Returns
+   #------------------------------------------------------------------------------------------
+   # Test whether returns arenormal
+   Sr<-df.rr.ts[,2]
+   shapiroTest <- assetsTest(df.rr.ts[, 1:3], method = "shapiro")
+  print(shapiroTest)
+     #slotNames(shapiroTest)
+     names(shapiroTest)
    
+   #7.2 FITTING ASSET RETURNS
+     # first try the student's T distribuion
+     fit <- assetsFit(df.rr.ts[, 1:3], method = "st")
+     print(fit)
+   #Can also use the copula estimation approach, use pckge fCopula
+    #---------------------------------------------------------------------------------------------
+    #
+    # Selecting similar or dissimilar assets
+     #
+     # 
+    
    
-   
+     XLUData<-df.rr.ts
+     hclustComplete <- assetsSelect(XLUData, method = "hclust")
+    hclustComplete
+    plot(hclustComplete, xlab="XLU compnent assets")
+     Call:
+         hclust(d = dist(t(x), method = measure), method = method)
+     #Cluster method : complete
+     #Distance : euclidean
+     #Number of objects: 9
+  plot(hclustComplete, xlab = "XLU Components")
+    mtext("Distance Metric: Euclidean", side = 3) 
+     
+     
+     
+    hclustWard <- assetsSelect(XLUData, method = "hclust", control = c(measure = "euclidean",
+                                                                         method = "ward.D"))
+    hclustWard
+   plot(hclustWard)
+  mtext("Distance Metric: Euclidean", side = 3)
+  #---------------------------Grouping using eigenvalues
+  
+  assetsCorEigenPlot(XLUData, method = "kendall")
+  #8.5
+  #---------grouping using kmeans analysis
+ kmeans <- assetsSelect(XLUData, method = "kmeans", control <- c(centers = 10,
+                                                                    algorithm = "Hartigan-Wong"))
+ sort(kmeans$cluster)
+     
+  #--------------------------------------------------------------------------------------------
+  # COMPARING MULTIVARIATE RETURN AND RISK STATISTICS
+ assetsBasicStatsPlot(XLUData[, -8], title = "", description = "")
+ assetsMomentsPlot(XLUData[, -8], title = "", description = "")    
+ assetsBoxStatsPlot(XLUData[, -8], title = "", description = "")   
+   #---------------------------------------------------------------------------------------------
+ #  PAIRWISE DEPENDENCIES OF ASSETS
+ library(fMultivar)
+ #Function:
+ #     pairs displays pairs of scatterplots of assets
+ # assetsPairsPlot displays pairs of scatterplots of assets
+ # assetsCorgramPlot displays correlations between assets
+ # assetsCorTestPlot displays and tests pairwise correlations
+ # assetsCorImagePlot displays an image plot of correlations
+ # squareBinning does a square binning of data points,
+ # hexBinning does a hexagonal binning of data points
+     #SIMPLE PAIRWISE SCATTER PLOTS OF ASSETS
+ #     We will rearrange the assets as suggested by hierarchical clustering. This
+ # yields a nicer arrangement and view of the off-diagonal scatterplot panels
+ # of the graph.
+ 
+ v.assets   <- assetsArrange(XLUData, method = "hclust");
+ XLUData2<-100*XLUData[,v.assets];
+ assetsPairsPlot(XLUData2,pch=19,cex=0.5,col="royalblue4");#Not useful for more than 10 variables
+ v.sc<-seq(from=1,to=length(v.assets),by=4)
+ assetsPairsPlot(XLUData2[,v.sc],pch=19,cex=0.5,col="royalblue4");
+ assetsCorImagePlot(XLUData2[,v.sc])
+ #----------------------------------------------------------------------------
+ # Portfolio Framework
+ #------------------------------------------------------------------------------
+ library(fPortfolio);
+ mySpec<-portfolioSpec();  #create default (MV) portfoliospec
+ getWeights(mySpec)
+ setWeights(mySpec) <- rep(1.0/28.0,28) 
+ getTargetReturn(mySpec)
+ getTargetRisk(mySpec)
+ getOptimize(mySpec)
+ setTargetReturn(mySpec) <- 0.025
+ setTargetRisk(mySpec) <- 0.3
+ setRiskFreeRate(mySpec)<-0.02
+ 
+ showClass("fPFOLIODATA")
+ 
+ myAssets<-100*XLUData[,v.assets[v.sc]];
+ 
+ myData<-portfolioData(data = myAssets, spec = portfolioSpec())
+ str(myData)
+ print(myData)
+ getStatistics(myData)
+ showClass("fPFOLIOCON")
+ setTargetReturn(mySpec) <- mean(myAssets);
+ Constraints <- "LongOnly"
+ defaultConstraints <- portfolioConstraints(myData, mySpec, Constraints)
+ str(defaultConstraints, width = 65, strict.width = "cut")
+ print(defaultConstraints)
+ showClass("fPORTFOLIO")
+ tgPortfolio <- tangencyPortfolio( myAssets)
+ str(tgPortfolio, width = 65, strict.width = "cut") 
+ print(tgPortfolio);
+ tgPortfolio@portfolio
+ #mean-var portfolios
+ 
+ 
     l.Res<-list();
     return(l.Res)
 }
