@@ -43,8 +43,8 @@ registerDoSEQ()
 
 v.holdings    <- list.files(dirHoldings,include.dirs=FALSE);
 v.ETFs        <- str_sub(v.holdings,1,-7)
-0
-<- df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
+# 0
+# <- df.EODTickers%>%dplyr::filter(Ticker %in% v.ETFs);
 ietf<-21;
 df.TargetDirectoryETFs$ETF<-as.character(df.TargetDirectoryETFs$ETF)
 df.dictentry<-df.TargetDirectoryETFs[ietf,]

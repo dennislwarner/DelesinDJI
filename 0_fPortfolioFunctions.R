@@ -20,35 +20,124 @@ setMethod("turnpoints", "timeSeries",
                          documentation = x@documentation)
           }
 )
+##################################################
+trainyears<-5;
+testmonths<-3
+f.getMyData<-function(df.x.xts){
+    df.x.xts<-na.locf(df.x.xts,na.rm=FALSE,fromLast = TRUE)
+    df.xx.ts<-as.timeSeries(df.x.xts)
+    #convert to returns
+    df.r.ts<-returns(df.xx.ts,trim=FALSE)
+    df.r.xts<-as.xts(df.r.ts)
+    df.r.xts[1,]<-0;
+    df.rr.ts<-df.r.ts;
+    df.rr.ts[1,]<-0;
+    myData<-100*df.rr.ts;
+    return(df.r.xts)
+}
+f.prepfPortData<-function(df.x.xts,freq,`trainyears`,testmonths){
+    #fPortfolio works with daily frequency
+    #  find the era points, where the training period has a given number of years and the test period a number of months
+    v.meop<-endpoints(df.x.xts,on="months");
+    nmonths<-length(v.meop)-1
+    ntrainmonths<-trainyears*12
+    numeras<-ceiling((nmonths-ntrainmonths)/testmonths);
+    iera<-0;
+    v.dates<-index(df.x.xts)
+    df.era<-data.frame(matrix(0,numeras,4))
+    names(df.era)<-c("TrainSpan","TestSpan","n3","n4")
+    while(iera<numeras){
+        iera<-iera+1
+        ftrain<-(iera-1)*testmonths+1;
+        ltrain<-ftrain+ntrainmonths-1;
+        ftd<-v.dates[v.meop[ftrain]+1]
+        ltd<-v.dates[v.meop[ltrain+1]]
+        ftestd<-v.dates[v.meop[ltrain+1]+1];
+        ltesto<-min(length(v.meop),ltrain+1+testmonths)
+        ltestd<-v.dates[v.meop[ltesto]]
+        
+        trainspan<-paste(ftd,"/",ltd,sep="");
+        testspan<-   paste(ftestd,"/",ltestd,sep="");
+        rt<-         df.x.xts[trainspan,]
+        df.era$TrainSpan[iera]  <- trainspan;
+        df.era$TestSpan[iera]   <- testspan;
+     }
+    df.r.xts<-f.getMyData(df.x.xts);
+    l.Res<-list(df.Eras= df.era,
+                df.x.xts=df.x.xts,
+                df.r.xts=df.r.xts,
+                #R.ts = R.ts,
+                v.dates=v.dates,
+                trainyears=trainyears,
+                testmonths=testmonths,
+                v.stocks=names(df.r.xts),
+                nStocks=length(v.stocks)
+                )
+    return(l.Res)
+}
+    
+   
 f.fPortFullSim<-function(df.x.xts,df.dictentry){
     freq<-"months";
-    trainyears<-2;
-    testyears<-1;
-    l.PortData   <-   f.prepPortData(df.x.xts,freq,trainyears,testyears);
-    names(l.PortData)
+    trainyears<-6;
+    testmonths<-6;
+    l.P   <-   f.prepfPortData(df.x.xts,freq,trainyears,testmonths);
+    names(l.P)
     # begin the era loop
     
-    df.Eras<-l.PortData$df.Eras;
-    df.x.xts<-l.PortData$df.x.xts
-    df.R.xts<-l.PortData$df.R.xts
-    df.R.ts<-as.timeSeries(df.R.xts);
-    v.dates<-l.PortData$v.dates
-    iera<-0;
-    while(iera<l.PortData$numEras){
+    df.Eras<-l.P$df.Eras;
+    df.x.xts<-l.P$df.x.xts
+    df.r.xts<-l.P$df.r.xts
+    df.r.ts<-as.timeSeries(df.r.xts)
+    
+    v.dates<-l.P$v.dates
+    nStocks<-l.P$nStocks;
+    
+      iera<-0;
+    while(iera<l.P$numEras){
         iera<-iera+1;
-        ftrain<-df.Eras$fTrno[iera];
-        ltrain<-df.Eras$lTrno[iera];
-        ftest<-df.Eras$fTsto[iera];
-        ltest<-df.Eras$lTsto[iera];
-        Rtrain<-df.R.ts[ftrain:ltrain,];
-        Rtest<-df.R.ts[ftest:ltest,];
-        #the data have been extracted now derive the optimum weights
+        Trainspan<-df.Eras$TrainSpan[iera];
+        Testspan<-df.Eras$TestSpan[iera];
+        RTrain.ts<-as.timeSeries(df.r.xts[df.Eras$TrainSpan[iera],])
+        RTest.ts<-as.timeSeries(df.r.xts[df.Eras$TestSpan[iera],])
+        #both include the target etf in the last column,  separate them
+        TrainStocks.ts<-RTrain.ts[,-ncol(RTrain.ts)]
+        TrainETF.ts<-RTrain.ts[,ncol(RTrain.ts)]
+        
+        TestStocks.ts<-RTest.ts[,-ncol(RTest.ts)]
+        TestETF.ts<-RTest.ts[,ncol(RTest.ts)]
+        
+        
+       #the data have been extracted now derive the optimum weights
 
-        cat(iera,as.Date(v.dates[df.Eras$fTrno[iera]]),
-            df.Eras$lTrno[iera],
-            df.Eras$fTsto[iera],
-            df.Eras$lTsto[iera],
-            df.Eras$TstSpan[iera],"\n")
+        cat(iera,Trainspan,"---",Testspan,"\n");
+          
+        #----------------------------------------------------------
+        # Tangency portfolio 
+        #----------------------------------------------------------
+        tgSpec <- portfolioSpec()
+        setRiskFreeRate(tgSpec) <- 0.02
+        box.1<-paste("minW[1:",nStocks,"]=0.0",sep="");
+        box.2<-paste("maxW[1:",nStocks,"]=0.2",sep="");
+        boxConstraints<-c(box.1,box.2)
+        tgPortfolio <- tangencyPortfolio(
+            data = TrainStocks.ts,
+            spec = tgSpec,
+            constraints=boxConstraints)
+        print(tgPortfolio);    
+        v.weights<-tgPortfolio@portfolio$weights
+        
+       
+        col <- seqPalette(ncol(myStocks2), "BuPu") 
+        weightsPie(tgPortfolio, box = FALSE, col = col)
+        mtext(text = "Tangency MV Portfolio", side = 3, line = 1.5,
+              font = 2, cex = 0.7, adj = 0)
+        weightedReturnsPie(tgPortfolio, box = FALSE, col = col)
+        mtext(text = "Tangency MV Portfolio", side = 3, line = 1.5,
+              font = 2, cex = 0.7, adj = 0)
+        covRiskBudgetsPie(tgPortfolio, box = FALSE, col = col)
+        mtext(text = "Tangency MV Portfolio", side = 3, line = 1.5,
+              font = 2, cex = 0.7, adj = 0) 
     }
     
     
@@ -56,6 +145,10 @@ f.fPortFullSim<-function(df.x.xts,df.dictentry){
     
     
 }
+
+
+
+
 f.fPoertfolioEstimates2<-function(df.x.xts,df.dictentry){
     #convert xts to time series as used in fPortfolio package
     df.x.xts<-na.locf(df.x.xts,na.rm=FALSE,fromLast = TRUE)
