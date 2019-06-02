@@ -63,14 +63,18 @@ f.prepfPortData<-function(df.x.xts,freq,`trainyears`,testmonths){
         df.era$TestSpan[iera]   <- testspan;
      }
     df.r.xts<-f.getMyData(df.x.xts);
+    v.stocks<-names(df.r.xts)[-ncol(df.r.xts)];
+    etfname<-names(df.r.xts)[ncol(df.r.xts)]
     l.Res<-list(df.Eras= df.era,
+                numEras=numeras,
                 df.x.xts=df.x.xts,
                 df.r.xts=df.r.xts,
                 #R.ts = R.ts,
                 v.dates=v.dates,
                 trainyears=trainyears,
                 testmonths=testmonths,
-                v.stocks=names(df.r.xts),
+                v.stocks<-v.stocks,
+                etfname=etfname,
                 nStocks=length(v.stocks)
                 )
     return(l.Res)
@@ -80,10 +84,10 @@ f.prepfPortData<-function(df.x.xts,freq,`trainyears`,testmonths){
 f.fPortFullSim<-function(df.x.xts,df.dictentry){
     freq<-"months";
     trainyears<-6;
-    testmonths<-6;
+    testmonths<-12;
+    
+    #----Prep Data for Eras----
     l.P   <-   f.prepfPortData(df.x.xts,freq,trainyears,testmonths);
-    names(l.P)
-    # begin the era loop
     
     df.Eras<-l.P$df.Eras;
     df.x.xts<-l.P$df.x.xts
@@ -91,56 +95,81 @@ f.fPortFullSim<-function(df.x.xts,df.dictentry){
     df.r.ts<-as.timeSeries(df.r.xts)
     
     v.dates<-l.P$v.dates
+    nVars  <-ncol(df.r.xts)
     nStocks<-l.P$nStocks;
-    
+    #----
+    #Set up non-variable portfolio parameters
+    tgSpec <- portfolioSpec()
+    setRiskFreeRate(tgSpec) <-rfr<- 0.00
+    box.1                   <- paste("minW[1:",nStocks,"]=0.0",sep="");
+    box.2                   <- paste("maxW[1:",nStocks,"]=0.25",sep="");
+    boxConstraints          <- c(box.1,box.2)
+    #----Loop Across Eras----
       iera<-0;
+    df.res<-data.frame(matrix(0,l.P$numEras,nVars+6));
+    names(df.res)<-c(names(df.r.ts),"Risk","Sharpe","ract","rhat","RActCum","RHatCum")
+    rhatcum<-ractcum<-0;
+    df.fore.xts<-as.xts(data.frame(matrix(0,nrow(df.r.ts),3)),order.by = v.dates)
+   
     while(iera<l.P$numEras){
         iera<-iera+1;
-        Trainspan<-df.Eras$TrainSpan[iera];
-        Testspan<-df.Eras$TestSpan[iera];
-        RTrain.ts<-as.timeSeries(df.r.xts[df.Eras$TrainSpan[iera],])
-        RTest.ts<-as.timeSeries(df.r.xts[df.Eras$TestSpan[iera],])
+        Trainspan    <- df.Eras$TrainSpan[iera];
+        Testspan     <- df.Eras$TestSpan[iera];
+        RTrn         <- as.timeSeries(df.r.xts[Trainspan,]);
+        RTst         <- as.timeSeries(df.r.xts[Testspan,]);
+        if(iera==1){
+            testrows<-nrow(RTrn)
+        }
         #both include the target etf in the last column,  separate them
-        TrainStocks.ts<-RTrain.ts[,-ncol(RTrain.ts)]
-        TrainETF.ts<-RTrain.ts[,ncol(RTrain.ts)]
-        
-        TestStocks.ts<-RTest.ts[,-ncol(RTest.ts)]
-        TestETF.ts<-RTest.ts[,ncol(RTest.ts)]
-        
-        
-       #the data have been extracted now derive the optimum weights
-
         cat(iera,Trainspan,"---",Testspan,"\n");
-          
         #----------------------------------------------------------
-        # Tangency portfolio 
+        # Solve for the Tangency portfolio 
         #----------------------------------------------------------
-        tgSpec <- portfolioSpec()
-        setRiskFreeRate(tgSpec) <- 0.02
-        box.1<-paste("minW[1:",nStocks,"]=0.0",sep="");
-        box.2<-paste("maxW[1:",nStocks,"]=0.2",sep="");
-        boxConstraints<-c(box.1,box.2)
-        tgPortfolio <- tangencyPortfolio(
-            data = TrainStocks.ts,
-            spec = tgSpec,
-            constraints=boxConstraints)
-        print(tgPortfolio);    
-        v.weights<-tgPortfolio@portfolio$weights
-        
+        tgPortfolio <- tangencyPortfolio(data = RTrn[,-nVars],
+            spec = tgSpec, constraints=boxConstraints);
+        v.weights <- tgPortfolio@portfolio@portfolio$weights;
+        ror<-tgPortfolio@portfolio@portfolio$targetReturn[1];
+        st <-tgPortfolio@portfolio@portfolio$targetRisk[1];
+        sharpe<-(ror-rfr)/st
+        df.res[iera,1:length(v.weights)]<-v.weights;
+        df.res[iera,nVars]<-ror;
+        df.res[iera,nVars+1]<-st;
+        df.res[iera,nVars+2]<-sharpe
+        portname<-paste("Tangency MV Portfolio"," - ",l.P$etfname,"-",Trainspan,sep="")
+        #Forecast thru the test period
+        it<-0;
+        ntestobs<-nrow(RTst)
        
-        col <- seqPalette(ncol(myStocks2), "BuPu") 
+        while(it<ntestobs){
+            it<-it+1;
+            rhat<-v.weights%*%t(RTst[it,-nVars])
+            ract<-RTst[it,nVars]
+            rhatcum<-rhatcum+rhat;
+            ractcum<-ractcum+as.numeric(ract);
+            
+            testrows<-testrows+1;
+          #  df.fore.xts[testrows,1]<-rhat;
+          #  df.fore.xts[testrows,2]<-ract;
+            df.fore.xts[testrows,1]<-rhatcum;
+            df.fore.xts[testrows,2]<-ractcum;
+            df.fore.xts[testrows,3]<-rhatcum-ractcum;
+            cat(iera,it,as.character(v.dates[testrows]),rhatcum,ractcum,"\n");
+            
+        }
+            
+        col <- seqPalette(ncol(TrainStocks.ts), "BuPu") 
         weightsPie(tgPortfolio, box = FALSE, col = col)
-        mtext(text = "Tangency MV Portfolio", side = 3, line = 1.5,
+        mtext(text = portname, side = 3, line = 1.5,
               font = 2, cex = 0.7, adj = 0)
         weightedReturnsPie(tgPortfolio, box = FALSE, col = col)
-        mtext(text = "Tangency MV Portfolio", side = 3, line = 1.5,
+        mtext(text = portname, side = 3, line = 1.5,
               font = 2, cex = 0.7, adj = 0)
         covRiskBudgetsPie(tgPortfolio, box = FALSE, col = col)
-        mtext(text = "Tangency MV Portfolio", side = 3, line = 1.5,
+        mtext(text = portname, side = 3, line = 1.5,
               font = 2, cex = 0.7, adj = 0) 
     }
-    
-    
+    names(df.fore.xts)<-c("IHat","IAct","Gain")
+    plot.xts(df.fore.xts)
     
     
     
