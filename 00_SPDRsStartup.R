@@ -47,4 +47,4 @@ df.BigETFs         <- df.EODTickers%>%dplyr::filter(Ticker %in% v.BigETFs)
 df.IndustryETFs    <- df.EODTickers%>%dplyr::filter(Ticker %in% v.IndustryETFs)
 df.ShortsETFs      <- df.EODTickers%>%dplyr::filter(Ticker %in% v.shorts)
 fnin               <- paste(dirDocs,"/TargetDirectory.xlsx",sep="");
-df.TargetDirectoryETFs<-read.xlsx(fnin,sheetIndex = 1)
+df.TargetDirectoryETFs<-read.xlsx(fnin,sheetIndex = 1,stringsAsFactors = FALSE)

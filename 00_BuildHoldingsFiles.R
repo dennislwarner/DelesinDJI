@@ -35,6 +35,21 @@ while(ihold<length(v.holdings)){
     df.good           <- df.CO%>%dplyr::filter(Ticker %in% v.etfTickers) ;
     v.goodSymbol      <- df.good$Quandl_Code#[v.etfTickers %in% df.CO$Ticker]
     df.x.xts          <-f.getETFpackage(v.goodSymbol)
+    
+    names(df.x.xts)<-str_sub(names(df.x.xts),5,)
+    df.x<-f.xts2df(df.x.xts)
+    #ensure coloumns are in required order, where the target etf is the last column
+    #  Should move to the the 00_BuildHoldingsFiles.R above----
+    v.target<-df.x[,etf]
+    firsttarget<-min(which(is.finite(v.target)))
+    firsttargetdate<-index(df.x.xts)[firsttarget]
+    targetdesc<-df.TargetDirectoryETFs$Description[ietf]
+    df.xx<-df.x%>%dplyr::select(-etf)
+    df.xx<-data.frame(df.xx,v.target);
+    names(df.xx)[ncol(df.xx)]<-etf
+    df.x.xts<-df.xx%>%f.df2xts()
+    
+    
     fnout<-paste(dirPackages,"/",etf,"_P.xts",sep="");
     save(df.x.xts,file=fnout)
     cat(ihold,etf,"---",etfCO$Name,"#Companies = ",nrow(df.CO)-1,"\n");

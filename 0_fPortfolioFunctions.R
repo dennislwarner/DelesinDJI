@@ -1,25 +1,25 @@
-setMethod("lowess", "timeSeries", function(x, y = NULL, f = 2/3,
-                                           iter = 3) {
-    stopifnot(isUnivariate(x))
-    ans <- stats::lowess(x = as.vector(x), y, f, iter)
-    series(x) <- matrix(ans$y, ncol = 1)
-    return(x);
-})
-setMethod("turnpoints", "timeSeries",
-          function(x)
-          {
-              stopifnot(isUnivariate(x))
-              tp <- suppressWarnings(pastecs::turnpoints(as.ts(x)))
-              recordIDs <- data.frame(tp$peaks, tp$pits)
-              rownames(recordIDs) <- rownames(x)
-              colnames(recordIDs) <- c("peaks", "pits")
-              timeSeries(data = x, charvec = time(x),
-                         units = colnames(x), zone = finCenter(x),
-                         FinCenter = finCenter(x),
-                         recordIDs = recordIDs, title = x@title,
-                         documentation = x@documentation)
-          }
-)
+# setMethod("lowess", "timeSeries", function(x, y = NULL, f = 2/3,
+#                                            iter = 3) {
+#     stopifnot(isUnivariate(x))
+#     ans <- stats::lowess(x = as.vector(x), y, f, iter)
+#     series(x) <- matrix(ans$y, ncol = 1)
+#     return(x);
+# })
+# setMethod("turnpoints", "timeSeries",
+#           function(x)
+#           {
+#               stopifnot(isUnivariate(x))
+#               tp <- suppressWarnings(pastecs::turnpoints(as.ts(x)))
+#               recordIDs <- data.frame(tp$peaks, tp$pits)
+#               rownames(recordIDs) <- rownames(x)
+#               colnames(recordIDs) <- c("peaks", "pits")
+#               timeSeries(data = x, charvec = time(x),
+#                          units = colnames(x), zone = finCenter(x),
+#                          FinCenter = finCenter(x),
+#                          recordIDs = recordIDs, title = x@title,
+#                          documentation = x@documentation)
+#           }
+# )
 ##################################################
 trainyears<-5;
 testmonths<-3
@@ -81,10 +81,9 @@ f.prepfPortData<-function(df.x.xts,freq,`trainyears`,testmonths){
 }
     
    
-f.fPortFullSim<-function(df.x.xts,df.dictentry){
+f.fPortFullSim<-function(ietf,df.x.xts,df.dictentry,trainyears,testmonths){
     freq<-"months";
-    trainyears<-6;
-    testmonths<-12;
+   
     
     #----Prep Data for Eras----
     l.P   <-   f.prepfPortData(df.x.xts,freq,trainyears,testmonths);
@@ -109,29 +108,37 @@ f.fPortFullSim<-function(df.x.xts,df.dictentry){
     df.res<-data.frame(matrix(0,l.P$numEras,nVars+6));
     names(df.res)<-c(names(df.r.ts),"Risk","Sharpe","ract","rhat","RActCum","RHatCum")
     rhatcum<-ractcum<-0;
-    df.fore.xts<-as.xts(data.frame(matrix(0,nrow(df.r.ts),3)),order.by = v.dates)
+    df.fore.xts<-as.xts(df.r.ts[,1:3]*0)
+   
    
     while(iera<l.P$numEras){
         iera<-iera+1;
         Trainspan    <- df.Eras$TrainSpan[iera];
         Testspan     <- df.Eras$TestSpan[iera];
         RTrn         <- as.timeSeries(df.r.xts[Trainspan,]);
+        v.goodstocks<-which(colSums(RTrn[,-nVars])!=0)
         RTst         <- as.timeSeries(df.r.xts[Testspan,]);
         if(iera==1){
-            testrows<-nrow(RTrn)
+            firstForeObs<-testrows<-nrow(RTrn)
         }
         #both include the target etf in the last column,  separate them
-        cat(iera,Trainspan,"---",Testspan,"\n");
+        #cat(iera,Trainspan,"---",Testspan,"\n");
         #----------------------------------------------------------
         # Solve for the Tangency portfolio 
         #----------------------------------------------------------
-        tgPortfolio <- tangencyPortfolio(data = RTrn[,-nVars],
+        ngood<-length(v.goodstocks)
+        box.1                   <- paste("minW[1:",ngood,"]=0.0",sep="");
+        box.2                   <- paste("maxW[1:",ngood,"]=0.25",sep="");
+        boxConstraints          <- c(box.1,box.2)
+        
+        tgPortfolio <- tangencyPortfolio(data = RTrn[,v.goodstocks],
             spec = tgSpec, constraints=boxConstraints);
         v.weights <- tgPortfolio@portfolio@portfolio$weights;
         ror<-tgPortfolio@portfolio@portfolio$targetReturn[1];
         st <-tgPortfolio@portfolio@portfolio$targetRisk[1];
         sharpe<-(ror-rfr)/st
-        df.res[iera,1:length(v.weights)]<-v.weights;
+        df.res[iera,v.goodstocks]<-v.weights;
+   
         df.res[iera,nVars]<-ror;
         df.res[iera,nVars+1]<-st;
         df.res[iera,nVars+2]<-sharpe
@@ -142,7 +149,7 @@ f.fPortFullSim<-function(df.x.xts,df.dictentry){
        
         while(it<ntestobs){
             it<-it+1;
-            rhat<-v.weights%*%t(RTst[it,-nVars])
+            rhat<-v.weights%*%t(RTst[it,v.goodstocks])
             ract<-RTst[it,nVars]
             rhatcum<-rhatcum+rhat;
             ractcum<-ractcum+as.numeric(ract);
@@ -153,25 +160,27 @@ f.fPortFullSim<-function(df.x.xts,df.dictentry){
             df.fore.xts[testrows,1]<-rhatcum;
             df.fore.xts[testrows,2]<-ractcum;
             df.fore.xts[testrows,3]<-rhatcum-ractcum;
-            cat(iera,it,as.character(v.dates[testrows]),rhatcum,ractcum,"\n");
+         #   cat(iera,it,as.character(v.dates[testrows]),rhatcum,ractcum,"\n");
             
         }
             
-        col <- seqPalette(ncol(TrainStocks.ts), "BuPu") 
-        weightsPie(tgPortfolio, box = FALSE, col = col)
-        mtext(text = portname, side = 3, line = 1.5,
-              font = 2, cex = 0.7, adj = 0)
-        weightedReturnsPie(tgPortfolio, box = FALSE, col = col)
-        mtext(text = portname, side = 3, line = 1.5,
-              font = 2, cex = 0.7, adj = 0)
-        covRiskBudgetsPie(tgPortfolio, box = FALSE, col = col)
-        mtext(text = portname, side = 3, line = 1.5,
-              font = 2, cex = 0.7, adj = 0) 
+        # col <- seqPalette(ncol(RTrn), "BuPu") 
+        # weightsPie(tgPortfolio, box = FALSE, col = col)
+        # mtext(text = portname, side = 3, line = 1.5,
+        #       font = 2, cex = 0.7, adj = 0)
+        # weightedReturnsPie(tgPortfolio, box = FALSE, col = col)
+        # mtext(text = portname, side = 3, line = 1.5,
+        #       font = 2, cex = 0.7, adj = 0)
+        # covRiskBudgetsPie(tgPortfolio, box = FALSE, col = col)
+        # mtext(text = portname, side = 3, line = 1.5,
+        #       font = 2, cex = 0.7, adj = 0) 
     }
     names(df.fore.xts)<-c("IHat","IAct","Gain")
-    plot.xts(df.fore.xts)
-    
-    
+    chartmain<-paste(ietf," ",l.P$etfname,"  ETF vs. Port",sep="")
+    v.goodobs<-firstForeObs:nrow(df.fore.xts)
+    #plot.xts(df.fore.xts[v.goodobs,],legend.loc='topleft',main=chartmain)
+    l.Res<-list(df.fore.xts=df.fore.xts,v.goodobs=v.goodobs,chartmain=chartmain)
+    return(l.Res)
     
 }
 
