@@ -42,8 +42,9 @@ f.divSum<-function(x,y,z){
     vv<-na.locf(v,na.rm=FALSE);
     return(vv)
 }
-f.getETFpackage <- function(v.goodSymbol) {
-    it <- 1
+f.getPricesA <- function(v.goodSymbol) {
+    it <- 
+        l.prices<-list();
     for (it in c(1:length(v.goodSymbol))) {
         itick <- v.goodSymbol[it]
         #get adjusted close..................
@@ -52,19 +53,24 @@ f.getETFpackage <- function(v.goodSymbol) {
         }else{
             fn <- paste("EOD/",itick, ".11", sep = "")
         }
-        
-        # fn<-paste("EOD/",itick,sep="");
-        df.cl.xts <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
-                        type = "xts", start_date = "2003-01-01")
-        if(it==1){
-            df.xts<-df.cl.xts;
-            names(df.xts)[1]<-itick;
-        }else{
-            df.xts<-merge.xts(df.xts,df.cl.xts,join='left');
-            names(df.xts)[ncol(df.xts)]<-itick;
-        }
+        fn2<-paste("EOD/",itick,  sep = "")
+        df.xts<-Quandl(fn2,api_key = '1yhZtVwmHpc7qys3iMuJ',
+                   type = "xts", start_date = "2003-01-01")[,8:12];
+        l.prices[[itick]]<-df.xts;
+        #,
+        #            qopts.columns=c("Adj_Open","Adj_High","Adj_Low","Adj_Close","Adj_Volume"));
+        # # fn<-paste("EOD/",itick,sep="");
+        # df.cl.xts <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
+        #                 type = "xts", start_date = "2003-01-01")
+        # if(it==1){
+        #     df.xts<-df.cl.xts;
+        #     names(df.xts)[1]<-itick;
+        # }else{
+        #     df.xts<-merge.xts(df.xts,df.cl.xts,join='left');
+        #     names(df.xts)[ncol(df.xts)]<-itick;
+        # }
     }
-    return(df.xts);
+    return(l.prices);
 }
 f.getSPY <- function() {
     df.SPY <- Quandl('EOD/SPY', api_key = '1yhZtVwmHpc7qys3iMuJ',

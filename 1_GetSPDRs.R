@@ -2,7 +2,7 @@
 dirOneDrive         <-  "D:/OneDrive";
 dirProject          <-  paste(dirOneDrive,"/DelesinDJI/DDJI",sep="");
 source("00_SPDRsStartup.R",echo=FALSE);
-REBUILD<-FALSE;
+qREBUILD<-FALSE;
 if(REBUILD){
     source("00_BuildHoldingsFiles.R",echo=FALSE);
 }
@@ -14,13 +14,13 @@ if(REBUILD){
 
 #work on the portfolio trackinig
 
-library(fPortfolio);
+suppressMessages(library(fPortfolio));
 suppressMessages(library(PerformanceAnalytics));
 suppressMessages(library(GA));
 suppressMessages(library(PortfolioAnalytics));
 suppressMessages(library(DEoptim));
 
-*suppressMessages(library(ROI));
+suppressMessages(library(ROI));
 suppressMessages(require(ROI.plugin.glpk));
 suppressMessages(require(ROI.plugin.quadprog));
 suppressMessages(library(psoptim));
@@ -54,7 +54,7 @@ df.dictentry<-df.TargetDirectoryETFs[ietf,]
 symb<-str_sub(df.dictentry$ETF,1,-3)
 fnin<-paste(dirPackages,"/",symb,"_P.xts",sep="")
 ss_df.x.xts<-load(fnin)
-names(df.x.xts)<-str_sub(names(df.x.xts),5,); #correct this in the 00_BuildHoldingsFiles.R file
+#names(df.x.xts)<-str_sub(names(df.x.xts),5,); #correct this in the 00_BuildHoldingsFiles.R file
 #lets look at every target ETF data series
 ietf<-0;
 v.symbs<-df.TargetDirectoryETFs$ETF;
@@ -97,7 +97,7 @@ while(ietf<38){
 #l.Res<-f.fPortfolioEstimates(df.x.xts,df.dictentry);
 trainyears<-6;
 testmonths<-12;
-l.Res<-f.fPortFullSim([ietf], df.x.xts,df.dictentry,trainyears,testmonths);
+l.Res<-f.fPortFullSim(ietf, df.x.xts,df.dictentry,trainyears,testmonths);
 plot.xts(l.Res$df.fore.xts[l.Res$v.goodobs,],legend.loc='topleft',main=l.Res$chartmain)
 
 
