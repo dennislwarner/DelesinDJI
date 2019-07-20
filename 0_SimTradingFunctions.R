@@ -1,20 +1,44 @@
-f.tristate<-function(x,ub,lb){
-    v<-rep(NA,length(x))
-    v[x>=ub]<-1;
-    v[x<=lb]<-(-1);
-    v<-na.locf(v,na.rm=FALSE);
-    v[is.na(v)]<-0;
+f.tristate<-function(x,ub,lf,sf,lb){
+    v<-rep(NA,length(x));
+    N<-length(x);
+    cpos<-0;
+    t<-0;
+    while(t<N){
+        t<-t+1;
+        xt<-x[t];
+        xtgtub<-(xt>=ub); xtltlb<-(xt<=lb);  xtltlf<-(xt<=lf); xtgtsf<-(xt>=lf)
+        if(xtgtub){
+            cpos<- 1;
+        }else{
+            if(xtltlb){cpos<-(-1)}
+            else{
+               if(cpos==1){
+                   if(xtltlf){cpos<-0}
+               }else{
+                   if(cpos==(-1)){
+                       if(xtgtsf){cpos<-0}
+                   }
+               }
+            }
+        }
+        v[t]<-cpos
+    }
+    # v[x>=ub]<-1;  
+    # v[x<=lb]<-(-1);
+    # v<-na.locf(v,na.rm=FALSE);
+    # v[is.na(v)]<-0;
     return(v)
 }
-f.GetTrades<-function(df.xts,method="Aroon",ub,lb){
+f.GetTrades<-function(df.xts,method="Aroon",ub,lf,sf,lb){
     if(method=="Aroon20"){
-        Aroon20<-aroon(df.xts[,2:3],15)
+        Aroon20<-aroon(df.xts[,9:10],15)
         
         v.indicator<-Aroon20$oscillator;
         v.indicator[is.na(v.indicator)]<-0;
     }
     # the trading pos will be a tristate value -1,NA,1
-    v.pos<-f.tristate(v.indicator,ub,lb)
+    x<-v.indicator;ub<-50;lf<-20;sf<-(-20);lb<-(-50);
+    v.pos<-f.tristate(v.indicator,ub,lf,sf,lb)
     #Trades occur when there is a change in the desired position
     v.trades<-sign(c(v.pos[1],diff(v.pos)));
     return(v.trades)
@@ -82,7 +106,8 @@ f.searchTrades<-function(df.xts,symb,cname,CASH){
     cat(symb,cname,nrow(df.xts),"\n");
     #----Try the Stochatic Momentum 
     #names(df.xts)<-c("Open","High","Low","Close","Volume")
-    v.signals<-f.GetTrades(df.xts,method="Aroon20",50,-50);
+    v.signals<-f.GetTrades(df.xts,method="Aroon20",50,20,-20,-50);
+    summary(v.signals)
     df<-f.TradeSim(df.xts,v.signals,symb,cname,CASH)
     
     

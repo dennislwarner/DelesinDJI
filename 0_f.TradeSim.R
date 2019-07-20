@@ -15,6 +15,7 @@ f.initPosition<-function(){
 }
 f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
     #df.xts  columns Date.Open,High,Low,Close,Volume,Trades
+    #augment the data
         v.nop               <-c(coredata(df.xts$Open)[-1],last(df.xts$Open))
         df.xts$nop         <-v.nop;
         df.xts$chnop       <-c(0,diff(df.xts$nop,na.pad=FALSE));
@@ -22,8 +23,9 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
         names(dfr)
         dfr$signals<-v.signals;
         
-        curpos<-list(symbol="",shares=0,onday=0,onprice=0.0,offday=0,offprice=0.0,pandl=0.0,curpice=0.0,commiss=0.0);
-        curtrade<-list(symbol="",Quantity=0,tradeprice=0.0,activityday=0,commission=0,)
+        curpos<-f.initPosition();
+        curtrade<-f.initTradeRecord();
+        
         #Account Number	Type	TradeInd	Transaction	Quantity	Cusip	Symbol	CallPut	UnderlyingSymbol	ExpireDate	StrikePrice	TD	SD	Activity Date	Price	Amount	CurrencyCode	Commission	Description	Order ID
 
         
