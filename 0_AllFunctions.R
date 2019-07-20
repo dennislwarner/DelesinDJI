@@ -43,7 +43,7 @@ f.divSum<-function(x,y,z){
     return(vv)
 }
 f.getPricesA <- function(v.goodSymbol) {
-    it <- 
+    it <- 1
         l.prices<-list();
     for (it in c(1:length(v.goodSymbol))) {
         itick <- v.goodSymbol[it]
@@ -55,7 +55,7 @@ f.getPricesA <- function(v.goodSymbol) {
         }
         fn2<-paste("EOD/",itick,  sep = "")
         df.xts<-Quandl(fn2,api_key = '1yhZtVwmHpc7qys3iMuJ',
-                   type = "xts", start_date = "2003-01-01")[,8:12];
+                   type = "xts", start_date = "2003-01-01");#[,8:12];
         l.prices[[itick]]<-df.xts;
         #,
         #            qopts.columns=c("Adj_Open","Adj_High","Adj_Low","Adj_Close","Adj_Volume"));

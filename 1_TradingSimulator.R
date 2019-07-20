@@ -15,81 +15,43 @@ dirD<-f.openDir("D:/Projects","/WarkleighD");
 dirData<-f.openDir(dirD,"/WarkleighData");
 
 dirResults<-f.openDir(dirD,"/TradingRes");
-dirSupport<-f.openDir(dirD,"/Tradingupport");
+dirSupport<-f.openDir(dirD,"/TradingSupport");
 dirAdjOpens<-f.openDir(dirData,"/adjOpens");
 
 source(paste(dirProject, "/0_AllFunctions.R", sep = ""));
 source(paste(dirProject, "/0_BuildDJI.R", sep = ""));
 source(paste(dirProject, "/0_LoadLibs.R", sep = ""));
+source(paste(dirProject, "/0_f.TradeSim.R",sep=""))
+source(paste(dirProject, "/0_SimTradingFunctions.R",sep=""))
 dirDocs             <-   paste(dirProject, "/Docs", sep = "");
 source(paste(dirProject,"/0_Prep.R",sep=""));
-library(DMwR2)
+#library(DMwR2)
+NEWRETRIEVE<-FALSE;
 #-----------------------------------------------------------------------
 #   use thd DJ components as the sample data set
-l.Prices<-f.getPricesA(v.tickers)
+if(NEWRETRIEVE){
+    l.Prices<-f.getPricesA(v.tickers);
+    save(l.Prices,file="Prices.RDATA")
+}else{
+    s_l.Prices<-load("Prices.RDATA");
+}
+
 iticker<-0
-while(iticker<length(v.tickers)){
+while(iticker<length(l.Prices)){
     iticker<-iticker+1;
     symb<-v.tickers[[iticker]];
-    cname<-df.DJDict[iticker,"Description"]
+    #description-v.descriptions[[iticker]]
+    cname<-as.character(df.DJDict[iticker,"Description"])
     df.xts<-l.Prices[[symb]]
     plot.xts(df.xts[,1:4],main=cname)
     #v.p.xts<-df.p.xts[,symb]
     #retrieve the price data for this symbol
-    dft<-f.searchTrades(df.xts,symb)
+    CASH<-100000;
+    dft<-f.searchTrades(df.xts,symb,cname,CASH)
     cat(iticker,symb,"\n");
 }
 
-f.searchTrades<-function(df.xts,symb){
-    cat(symb,nrow(df.xts),"\n");
-    #----Try the Stochatic Momentum 
-    names(df.xts)<-c("Open","High","Low","Close","Volume")
-    
-    SMI3MA <- SMI(df.xts[,2:4],
-                  nSlowD=21,nFastK=5,nFastK=4,
-                  maType=list(list(SMA), list(EMA, wilder=TRUE), list(SMA)) );
-    
-    
-    
-    
-    plot.xts(SMI3MA)
-    v.signals<-SMI3MA[,"signal"];
-    v.s<-trading.signals(v.signals,.3,-.3)
-    
-    
-    Aroon20<-aroon(df.xts[,2:3],15)
-    v.signals<-Aroon20$oscillator;
-    v.s<-trading.signals(v.signals,75,-75)
-    
-f.processSignals(df.xts,v.s){
-    v.s[is.na(v.s)]<-"h"
-    traderec<-trading.simulator(df.xts,v.s,"policy.2",init.cap=100000)
-    df.xts<-traderec@trading;
-    m.pos<-traderec@positions;
-    v.tradestats<-tradingEvaluation(traderec)
-}
-    
-    v.tradestats
-    
-    
-    v.s[is.na(v.s)]<-"h";
-    traderec<-trading.simulator(market=df.xts,signals=v.s,"policy.1")
-    v.tradeStats<-tradingEvaluation(traderec)
-    v.tradeStats
-    head(v.s)
-    traderec
-    plot(traderec,df.xts)
-    signature((x=))
-traderec
-m<-traderec[["trading"]]
-trad.xts<-traderec@trading
-m.pos<-traderec@positions
-    v.pos<-sign(SMI3MA$signal);
-    v.pos[is.na(v.pos)]<-0
-    
-    ntrades<-sum(abs(diff(v.pos)[-1]))
-    return()
-}
+
 
 
 
