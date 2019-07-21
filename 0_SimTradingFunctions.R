@@ -6,16 +6,16 @@ f.tristate<-function(x,ub,lf,sf,lb){
     while(t<N){
         t<-t+1;
         xt<-x[t];
-        xtgtub<-(xt>=ub); xtltlb<-(xt<=lb);  xtltlf<-(xt<=lf); xtgtsf<-(xt>=lf)
+        xtgtub<-(xt>=ub); xtltlb<-(xt<=lb);  xtltlf<-(xt<=lf); xtgtsf<-(xt>=sf)
         if(xtgtub){
             cpos<- 1;
         }else{
             if(xtltlb){cpos<-(-1)}
             else{
-               if(cpos==1){
+               if(cpos>0){
                    if(xtltlf){cpos<-0}
                }else{
-                   if(cpos==(-1)){
+                   if(cpos<0){
                        if(xtgtsf){cpos<-0}
                    }
                }
@@ -29,7 +29,7 @@ f.tristate<-function(x,ub,lf,sf,lb){
     # v[is.na(v)]<-0;
     return(v)
 }
-f.GetTrades<-function(df.xts,method="Aroon",ub,lf,sf,lb){
+f.GetSignals<-function(df.xts,method="Aroon20",ub,lf,sf,lb){
     if(method=="Aroon20"){
         Aroon20<-aroon(df.xts[,9:10],15)
         
@@ -37,11 +37,11 @@ f.GetTrades<-function(df.xts,method="Aroon",ub,lf,sf,lb){
         v.indicator[is.na(v.indicator)]<-0;
     }
     # the trading pos will be a tristate value -1,NA,1
-    x<-v.indicator;ub<-50;lf<-20;sf<-(-20);lb<-(-50);
+    #x<-v.indicator;ub<-50;lf<-20;sf<-(-20);lb<-(-50);
     v.pos<-f.tristate(v.indicator,ub,lf,sf,lb)
     #Trades occur when there is a change in the desired position
-    v.trades<-sign(c(v.pos[1],diff(v.pos)));
-    return(v.trades)
+    #v.trades<-sign(c(v.pos[1],diff(v.pos)));
+    return(v.pos)
 }
 f.BuildRecords<-function(df.xts,v.trades,CASH){
     # take positions at the next opening price
@@ -106,8 +106,10 @@ f.searchTrades<-function(df.xts,symb,cname,CASH){
     cat(symb,cname,nrow(df.xts),"\n");
     #----Try the Stochatic Momentum 
     #names(df.xts)<-c("Open","High","Low","Close","Volume")
-    v.signals<-f.GetTrades(df.xts,method="Aroon20",50,20,-20,-50);
-    summary(v.signals)
+    ub<-55;lb<-(-55);lf<-10;sf<-(-10);
+    v.signals<-f.GetSignals(df.xts,method="Aroon20",55,10,-10,-55);
+    summary(v.signals);
+    table(v.signals);
     df<-f.TradeSim(df.xts,v.signals,symb,cname,CASH)
     
     

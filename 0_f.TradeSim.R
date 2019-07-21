@@ -1,17 +1,41 @@
-f.initTradeRecord<-function(){
+f.initTradeRecord<-function(symb){
     #Account Number	Type	TradeInd	Transaction	Quantity	Cusip	Symbol	CallPut	
     #UnderlyingSymbol	ExpireDate	StrikePrice	TD	SD	Activity Date	Price	Amount
     #CurrencyCode	Commission	Description	Order ID
     l.trec<-list(Account_Number=123456,Type="",TradeInd="T",Transaction="Buy/Sell",Quantity=0,
-                 Cusip="11111t='",Symbol="AAPL",CallPut="",underlyingSymbol="",ExpireDate="",
+                 Cusip="11111t='",Symbol=symb,CallPut="",underlyingSymbol="",ExpireDate="",
                  StrikePrice="",TD="",SD="",ActivityDate="",price=0.0,Amount=0.0,
                  CurrencyCode="USD",Commission="5.00",Description="Apple Systems",Order_ID=12345);
     return(l.trec);
 }
-f.initPosition<-function(){
-    l.pos<-list(Symbol="AAPL",shares=0,dayon=0,priceon=0,curprice=0,pandl=0,Commissions=0.0,
-                 dayoff =0,age=0);
+f.initPosition<-function(symb,cashin){
+    l.pos<-list(Symbol=symb,shares=0,dayon=0,priceon=0,curprice=0,pandl=0,balannce=0.0,Commissions=0.0,
+                 dayoff =0,age=0,Cash=cashin);
     return(l.pos);
+}
+f.closepos<-function(curpos,newprice,t){
+    curpos$dayoff<-t;
+    curpos$priceoff<-newprice
+    curpos$Commissions<-curpos$Commissions+1;
+    curpos$pandl<-curpos$shares*(newprice-curpos$priceon);
+    curpos$Cash<-curpos$shares*curpos$priceoff;
+    curpos$Balance<-curpos$shares*newprice;
+    return(curpos)
+}
+f.openpos<-function(curpos,newps,newprice,t){
+    curpos$shares<-newps*floor(curpos$Cash/newprice)
+    curpos$priceon<-curpos$curprice<-newprice;
+    curpos$dayon<-t;
+    curpos$Commissions<-5;
+    
+    curpos$Cash<-curpos$Cash-abs((curpos$shares*newprice));
+    return(curpos)
+}
+f.markToMarket<-function(curpos,newprice){
+    curpos$age<-curpos$age+1;
+    curpos$priceoff<-newprice;
+    curpos$pandl<-curpos$shares*(newprice-curpos$priceon);
+    return(curpos)
 }
 f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
     #df.xts  columns Date.Open,High,Low,Close,Volume,Trades
@@ -23,11 +47,40 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
         names(dfr)
         dfr$signals<-v.signals;
         
-        curpos<-f.initPosition();
-        curtrade<-f.initTradeRecord();
+        curpos<-f.initPosition(symb,CASH);
+        curtrade<-f.initTradeRecord(symb);
         
         #Account Number	Type	TradeInd	Transaction	Quantity	Cusip	Symbol	CallPut	UnderlyingSymbol	ExpireDate	StrikePrice	TD	SD	Activity Date	Price	Amount	CurrencyCode	Commission	Description	Order ID
-
+#------------Loop through periods
+        t<-15;
+        N<-nrow(dfr);
+        while(t<N){
+            t<-t+1;
+            #mark current position to market
+            #first accomodate splits,adjust the current position to hold the new amount of shares
+            if(dfr$Split[t]!=1){curpos$shares<-curpos$shares*dfr$split[t]}
+            if(curpos$shares!=0){curpos<-f.markToMarket(curpos,dfr$nop[t])}
+            #if current position <> signals
+            # are we long?
+            newps<-dfr$signals[t];
+            curps<-sign(curpos$shares);
+            if(newps==0){
+                if(curps!=0){
+                    #close position
+                }
+            }else{
+                if(curps==0){
+                    newprice<-dfr$nop[t];
+                    curpos<-f.openpos(curpos,newps,newprice,t)
+                }else{
+                    #close position
+                    #open position
+                }
+            }
+           
+            
+            cat(t,"\n");
+        }
         
         
         df.t <- dfr%>%
@@ -60,7 +113,7 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
                 
                 
             signal<-v.trades[t];
-            if{(signal!=0)}
+            if(signal!=0)
             {
                 
             }

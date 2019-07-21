@@ -55,6 +55,7 @@ suppressMessages(library(iterators));
 suppressMessages(library(ROI));
 suppressMessages(library(ROI.plugin.quadprog));
 suppressMessages(library(ROI.plugin.glpk));
+suppressMessages(library(memisc));
 #suppressMessages(library(installr));
 #check.for.updates.R()
 #install.R() 
