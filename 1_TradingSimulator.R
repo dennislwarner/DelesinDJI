@@ -36,6 +36,8 @@ if(NEWRETRIEVE){
     s_l.Prices<-load("Prices.RDATA");
 }
 
+totaltrades<-0;
+totalprofits<-0;
 iticker<-0
 while(iticker<length(l.Prices)){
     iticker<-iticker+1;
@@ -47,8 +49,12 @@ while(iticker<length(l.Prices)){
     #v.p.xts<-df.p.xts[,symb]
     #retrieve the price data for this symbol
     CASH<-100000;
-    dft<-f.searchTrades(df.xts,symb,cname,CASH)
-    cat(iticker,symb,"\n");
+    l.res<-f.searchTrades(df.xts,symb,cname,CASH);
+    totalprofits<-totalprofits+l.res$PandL;
+    totaltrades<-totaltrades+l.res$NumTrades;
+    ppt<-totalprofits/totaltrades;
+    cat(l.res$symbol,"Num Trades=",l.res$NumTrades, "P&L=",l.res$PandL,"Totals=",totaltrades,totalprofits,ppt,"\n");
+    #cat(iticker,symb,"\n");
 }
 
 
