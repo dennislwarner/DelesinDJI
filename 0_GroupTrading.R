@@ -43,26 +43,52 @@ f.GroupTrade<-function(l.Prices,horizon,ub,lb){
     #----
     #----Rank the Nday performance----
     plot.xts(df.Cumror.xts[,1:5])
-   dfR.xts<-diff.xts(df.Cumror.xts,lag=horizon,na.pad=TRUE);
-   dfR.xts[is.na(dfR.xts)]<-0;
-   
-   m.rank<-t(apply(dfR.xts,1,rank));
-   m.rank[is.na(dfR.xts)]<-0
-  
-   m.pos<-0*m.rank;
-   m.pos[m.rank>ub]<-1;
-   m.pos[m.rank<lb]<-(-1);
-   m.nror<-coredata(df.nror.xts)
-   m.prof<-m.pos*m.nror;
-   m.prof[is.na(m.prof)]<-0;
-   m.cumprof<-apply(m.prof,2,cumsum);
-   v.totalprof<-rowSums(m.cumprof)
-   m.cumprof<-cbind(m.cumprof,v.totalprof);
-   colnames(m.cumprof)[ncol(m.cumprof)]<-"Total";
-   df.cumprof.xts<-as.xts(m.cumprof,order.by = index(dfR.xts))
-   plot.xts(df.cumprof.xts$Total)
+    
+   ihorizon<-0;
+   v.horizons<-c(5,20,65,130,261)
+   while(ihorizon<length(v.horizons)){
+        ihorizon<-ihorizon+1;
+        horizon<-v.horizons[ihorizon]; 
+    cat(ihorizon,horizon,"\n");
+       dfR.xts<-diff.xts(df.Cumror.xts,lag=horizon,na.pad=TRUE);
+       dfR.xts[is.na(dfR.xts)]<-0;
+       
+       m.rank                   <- t(apply(dfR.xts,1,rank));
+       m.rank[is.na(dfR.xts)]   <- 0;
+ 
+       
+       m.pos                <- 0*m.rank;
+ibest<-0;
+lb<-5
+v.bests<-c(0,2,5,10,15,20,25,29)
+while(ibest<length(v.bests)){
+    ibest<-ibest+1;
+     ub<-v.bests[ibest]
+     m.pos<-0*m.rank;
+       m.pos[m.rank>ub]     <- 1;
+       m.pos[m.rank<lb]     <- (-1);
+       m.signs<-sign(m.pos);
+       mabs<-abs(m.pos);
+       m.w<-prop.table(mabs,1);
+       m.weights<-m.signs*m.w;
+       #normalize the investments shares
+    
+       m.nror<-coredata(df.nror.xts)
+       m.prof<-m.weights*m.nror;
+       m.prof[is.na(m.prof)]<-0;
+       m.cumprof<-apply(m.prof,2,cumsum);
+       v.totalprof<-rowSums(m.cumprof)
+       m.cumprof<-cbind(m.cumprof,v.totalprof);
+       colnames(m.cumprof)[ncol(m.cumprof)]<-"Total";
+       df.cumprof.xts<-as.xts(m.cumprof,order.by = index(dfR.xts));
+       prof<-round(coredata(last(df.cumprof.xts$Total)),digits=2);
+       maintitle<-paste("Total Prof= ",prof,"H=",horizon,"UB=",ub,"LB=",lb,sep=" ")
+       plot.xts(df.cumprof.xts$Total, main=maintitle)
+}
+   }
    #---
-  
+  tail(df.cumprof.xts);
    #----
+   return(df.cumprof.xts)
 }
 ub<-24

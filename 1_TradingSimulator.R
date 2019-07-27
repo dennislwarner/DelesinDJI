@@ -39,6 +39,14 @@ if(NEWRETRIEVE){
 totaltrades<-0;
 totalprofits<-0;
 iticker<-0
+
+ub<-24
+lb<-0;
+horizon<-20;
+#f.GroupTrade<-function(l.Prices,horizon,ub,lb)
+df.TotalProf.xts<-f.GroupTrade(l.Prices,horizon,ub,lb);
+plot.xts(df.TotalProf.xts)
+
 while(iticker<length(l.Prices)){
     iticker<-iticker+1;
     symb<-v.tickers[[iticker]];
