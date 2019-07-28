@@ -23,6 +23,7 @@ while(ihold<length(v.holdings)){
     if(hold=="Original"){next}
     #load the holdings list for this target----
     hold<-str_sub(hold,start=1,end=-5);
+    ietf<-match(hold,df.TargetDirectoryETFs$ETF);#<-str_sub(hold,start=1,end=-4);
     etf<-str_sub(hold,1,-3)
     fnin<-paste(dirHoldings,"/",hold,".csv",sep="");
     df.x<-read.csv(fnin);
@@ -36,17 +37,23 @@ while(ihold<length(v.holdings)){
     v.goodSymbol      <- df.good$Quandl_Code#[v.etfTickers %in% df.CO$Ticker]
     df.x.xts          <-f.getETFpackage(v.goodSymbol)
     
-    names(df.x.xts)<-str_sub(names(df.x.xts),5,)
+    names(df.x.xts)<-str_sub(names(df.x.xts),5,);#strip the first 4 characters of the names (EOD.xxxx)
     df.x<-f.xts2df(df.x.xts)
     #ensure coloumns are in required order, where the target etf is the last column
     #  Should move to the the 00_BuildHoldingsFiles.R above----
     v.target<-df.x[,etf]
     firsttarget<-min(which(is.finite(v.target)))
     firsttargetdate<-index(df.x.xts)[firsttarget]
-    targetdesc<-df.TargetDirectoryETFs$Description[ietf]
-    df.xx<-df.x%>%dplyr::select(-etf)
-    df.xx<-data.frame(df.xx,v.target);
-    names(df.xx)[ncol(df.xx)]<-etf
+    targetdesc<-df.TargetDirectoryETFs$Description[ietf];
+    #drop the etf variable
+    v.xnames<-names(df.x);
+    etfpos<-match(etf,v.xnames);
+    df.y<-df.x[,-etfpos]
+    df.x<-cbind(df.y,df.x[,etfpos]);
+    names(df.x)[ncol(df.x)]<-etf;
+  
+    # df.xx<-data.frame(df.xx,v.target);
+    # names(df.xx)[ncol(df.xx)]<-etf
     df.x.xts<-df.xx%>%f.df2xts()
     
     

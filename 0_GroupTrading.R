@@ -22,6 +22,9 @@ f.GroupTrade<-function(l.Prices,horizon,ub,lb){
     names(df.nror.xts)[1]<-names(l.Prices[1]);
     ico<-1;
     goodico<-1;
+    l.reslog<-list();
+    df.log<-data.frame(matrix(0,1,5));
+    names(df.log)<-c("Prof","Trades","")
     while(ico<length(l.Prices)){
         ico<-ico+1;
         symb<-names(l.Prices)[[ico]];
@@ -84,6 +87,8 @@ while(ibest<length(v.bests)){
        prof<-round(coredata(last(df.cumprof.xts$Total)),digits=2);
        maintitle<-paste("Total Prof= ",prof,"H=",horizon,"UB=",ub,"LB=",lb,sep=" ")
        plot.xts(df.cumprof.xts$Total, main=maintitle)
+       df.prof.xts<-diff.xts(df.cumprof.xts);
+       tabl<-
 }
    }
    #---

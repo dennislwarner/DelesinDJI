@@ -7,7 +7,7 @@
 #                                                                             |
 #-----------------------------------------------------------------------------|
 
-dirDDrive       <- "D:/WarkleighD";
+dirDDrive       <- "D:/Projects/WarkleighD";
 dirData         <- paste(dirDDrive,"/WarkleighData",sep="");
 
 dirHoldings     <- paste(dirDDrive,"/ETFHoldings",sep="");

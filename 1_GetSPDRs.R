@@ -2,7 +2,7 @@
 dirOneDrive         <-  "D:/OneDrive";
 dirProject          <-  paste(dirOneDrive,"/DelesinDJI/DDJI",sep="");
 source("00_SPDRsStartup.R",echo=FALSE);
-qREBUILD<-FALSE;
+REBUILD<-FALSE;
 if(REBUILD){
     source("00_BuildHoldingsFiles.R",echo=FALSE);
 }
