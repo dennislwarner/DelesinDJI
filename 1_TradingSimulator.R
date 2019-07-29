@@ -9,11 +9,8 @@ f.openDir<-function(first,second){
 }
 
 dirDocs<-f.openDir(dirProject,"/Docs");
-
-
 dirD<-f.openDir("D:/Projects","/WarkleighD");
 dirData<-f.openDir(dirD,"/WarkleighData");
-
 dirResults<-f.openDir(dirD,"/TradingRes");
 dirSupport<-f.openDir(dirD,"/TradingSupport");
 dirAdjOpens<-f.openDir(dirData,"/adjOpens");
@@ -27,6 +24,10 @@ dirDocs             <-   paste(dirProject, "/Docs", sep = "");
 source(paste(dirProject,"/0_Prep.R",sep=""));
 #library(DMwR2)
 NEWRETRIEVE<-FALSE;
+fnin<-"D:/Projects/WarkleighD/ETFPackages/DIA_P.xts"
+ss_df.x.xts<-load(fnin);
+df.etf.xts<-df.x.xts[,ncol(df.x.xts)]
+v.tickers<-names(df.x.xts)[-ncol(df.x.xts)]
 #-----------------------------------------------------------------------
 #   use thd DJ components as the sample data set
 if(NEWRETRIEVE){
@@ -44,7 +45,7 @@ ub<-24
 lb<-0;
 horizon<-20;
 #f.GroupTrade<-function(l.Prices,horizon,ub,lb)
-df.TotalProf.xts<-f.GroupTrade(l.Prices,horizon,ub,lb);
+df.TotalProf.xts<-f.GroupTrade(l.Prices,df.etf.xts,horizon,ub,lb);
 plot.xts(df.TotalProf.xts)
 
 while(iticker<length(l.Prices)){
