@@ -118,7 +118,22 @@ f.makeTransactions<-function(dfr.xts,symb){
     # 17255155	Margin	T	Buy	50	38259P508	GOOG  				0	5/15/2012	5/18/2012	5/15/2012	608.6445	30433.23	USD	1.01	GOOGLE INC     	312455732
     
 }
-f.GroupTrading<-function()
+f.executeTrades<-function(df.xts,symb,cname,CASH,v.signals){
+    summary(v.signals);
+    
+    table(v.signals)
+    l.Res<-f.TradeSim(df.xts,v.signals,symb,cname,CASH);
+    fnout<-paste("D:/Projects/DDJIOutput/Aroon",symb,".RDATA",sep="");
+    save(l.Res,file=fnout);
+    fnout<-paste("D:/Projects/DDJIOutput/AroonPosiitons",symb,".csv",sep="");
+    write.csv(l.Res$Positions,file=fnout);
+    fnout<-paste("D:/Projects/DDJIOutput/AroonTrades_",symb,".csv",sep="");
+    write.csv(l.Res$df.Trades,file=fnout);
+    l.resb<-list(symbol=symb,NumTrades=nrow(l.Res$Trades),PandL=l.Res$CumulativeProfits)
+    
+    return(l.resb)
+    #return(l.Res)
+}
 f.searchTrades<-function(df.xts,symb,cname,CASH){
     #cat(symb,cname,nrow(df.xts),"\n");
     #----Try the Stochatic Momentum 

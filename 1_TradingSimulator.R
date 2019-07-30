@@ -22,6 +22,7 @@ source(paste(dirProject, "/0_f.TradeSim.R",sep=""))
 source(paste(dirProject, "/0_SimTradingFunctions.R",sep=""))
 dirDocs             <-   paste(dirProject, "/Docs", sep = "");
 source(paste(dirProject,"/0_Prep.R",sep=""));
+source(paste(dirProject,"/0_GroupTrading.R",sep=""));
 #library(DMwR2)
 NEWRETRIEVE<-FALSE;
 fnin<-"D:/Projects/WarkleighD/ETFPackages/DIA_P.xts"
@@ -45,20 +46,24 @@ ub<-24
 lb<-0;
 horizon<-20;
 #f.GroupTrade<-function(l.Prices,horizon,ub,lb)
-df.TotalProf.xts<-f.GroupTrade(l.Prices,df.etf.xts,horizon,ub,lb);
+m.pos<-f.GroupTrade(l.Prices,df.etf.xts,horizon,ub,lb);
 plot.xts(df.TotalProf.xts)
-
+v.tickers<-df.DJDict$Symbol;
 while(iticker<length(l.Prices)){
     iticker<-iticker+1;
     symb<-v.tickers[[iticker]];
     #description-v.descriptions[[iticker]]
     cname<-as.character(df.DJDict[iticker,"Description"])
+    cat(iticker,symb,cname,"\n");
+   
     df.xts<-l.Prices[[symb]]
     plot.xts(df.xts[,1:4],main=cname)
     #v.p.xts<-df.p.xts[,symb]
     #retrieve the price data for this symbol
     CASH<-100000;
-    l.res<-f.searchTrades(df.xts,symb,cname,CASH);
+    v.signals<-m.pos[,iticker];
+    l.res<-f.executeTrades(df.xts,symb,cname,CASH,v.signals);
+    #l.res<-f.searchTrades(df.xts,symb,cname,CASH);
     totalprofits<-totalprofits+l.res$PandL;
     totaltrades<-totaltrades+l.res$NumTrades;
     ppt<-totalprofits/totaltrades;

@@ -99,8 +99,10 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
         df.traderecord<-f.initTradeRecord(symb,cname);
         numtrades<-0;
         numpositions<-0;
-        t<-15;N<-nrow(dfr);
+        t<-0;N<-nrow(dfr);
         CumulativeProfits<-0;
+        firstpos<-min(which(v.signals!=0));
+        t<-firstpos-1;
         while(t<N){
             t<-t+1;
             desiredpos<-dfr$signals[t];
@@ -117,8 +119,8 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
                 if(currentpos!=0){
                     
                     CumulativeProfits<-CumulativeProfits+df.position$pandl;
-                   #cat("Closing Position",currentpos,df.position$pandl,t,CumulativeProfits,"\n");
-                    df.traderecord<-f.makeTrade(df.traderecord,symb,adate,desiredpos,df$shares,curprice,cname,t+iticker);
+                   cat("Closing Position",currentpos,df.position$pandl,t,CumulativeProfits,"\n");
+                    df.traderecord<-f.makeTrade(df.traderecord,symb,adate,desiredpos,df.position$shares,curprice,cname,t+iticker);
                     numtrades<-numtrades+1;
                     l.trades[[numtrades]]<-df.traderecord;
                     df.position<-f.closePosition(df.position,curprice,t);
@@ -132,7 +134,7 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
                     numtrades<-numtrades+1;
                     l.trades[[numtrades]]<-df.traderecord;
                     
-                    #cat("Opening Position",desiredpos,"Shares ",df.position$shares, "at",curprice,t,"\n");
+                    cat("Opening Position",desiredpos,"Shares ",df.position$shares, "at",curprice,t,"\n");
                 }
             }
             if(numpositions>0){

@@ -34,8 +34,67 @@ f.derivedEtfRor<-function(df.etf.xts,cname){
     names(v.etfror.xts)<-cname
     return(v.etfror.xts)
 }
+f.bridge<-function(x){
+    nt<-sum(abs(diff(x)));  # of trades entering;
+    n<-length(x);
+    for(t in 3:length(x)){
+        if(x[t-2]==1){
+            if(x[t-1]==0){
+                if(x[t]==1){
+                    x[t-1]<-1;
+                    # cat(t,x[t-2],x[t-1],x[t],"\n");
+                }
+            }
+        }else{
+            if(x[t-2]==(-1)){
+                if(x[t-1]==0){
+                    if(x[t]==(-1)){
+                        x[t-1]<-(-1);
+                        #cat(t,x[t-2],x[t-1],x[t],"\n");
+                    }
+                }
+            }
+            #cat(t,"\n")
+        }
+    }
+    return(x);
+}
+f.delay<-function(x){
+    nt<-sum(abs(diff(x)));  # of trades entering;
+    n<-length(x);
+    yage<-0*x;
+    yage[1]<-1
+    for(t in 2:length(x)){
+        if(x[t]==x[t-1]){
+            yage[t]<-yage[t-1]+1;
+        }else{
+            yage[t]<-1;
+        }
+    }
+     for(t in 2:length(x)){
+         if(yage[t]<2){
+             x[t]<-x[t-1]
+         }
+     }       
+  
+    return(x);
+}
 f.GroupTrade <- function(l.Prices,df.etf.xts, horizon, ub, lb) {
     #  Prepare the group Ror tables
+    #specify a matrix of ub,lb pairs
+    m.bounds<-matrix(0,10,2)
+    m.bounds[1,]<-c(0,0);
+    m.bounds[2,]<-c(10,0);
+    m.bounds[3,]<-c(15,0);
+    m.bounds[4,]<-c(20,0);
+    m.bounds[5,]<-c(25,0);
+    m.bounds[6,]<-c(20,2);
+    m.bounds[7,]<-c(25,2);
+    m.bounds[8,]<-c(15,3);
+    m.bounds[9,]<-c(20,3);
+    m.bounds[10,]<-c(25,3);
+    
+    colnames(m.bounds)<-c("UB","LB");
     #  1  df.Cumror.xts    cumulative adjusted close Rors
     #  2  df.Nror.xts      daily rates of return for next opening
     
@@ -63,44 +122,42 @@ f.GroupTrade <- function(l.Prices,df.etf.xts, horizon, ub, lb) {
     #----Rank the Nday performance----
     plot.xts(df.CumRor.xts[, 2:8])
     iwindow <- 0;
-    v.windows <- c(5, 20, 65, 130, 261);
+    v.windows <- c(5,10,20,65,130,261,522);
+    v.windows<-c(65)
+    l.TradeRes<-list();
     while (iwindow < length(v.windows)) {
         iwindow <- iwindow + 1
-        window <- v.windows[ihorizon]
+        window <- v.windows[iwindow]
         cat(iwindow, window, "\n")
        
         dfkR.xts <- diff.xts(df.CumRor.xts, lag = window, na.pad = TRUE)
         dfkR.xts[is.na(dfkR.xts)] <- 0
         m.rank                   <- t(apply(dfkR.xts, 1, rank))
         m.rank[is.na(dfkR.xts)]   <- 0
+        m.signr<-sign(dfkR.xts)
         m.pos                <- 0 * m.rank
         ibest <- 0
         
-        #specify a matrix of ub,lb pairs
-        m.bounds<-matrix(0,10,2)
-        m.bounds[1,]<-c(0,0);
-        m.bounds[2,]<-c(10,0);
-        m.bounds[3,]<-c(15,0);
-        m.bounds[4,]<-c(20,0);
-        m.bounds[5,]<-c(25,0);
-        m.bounds[6,]<-c(15,5);
-        m.bounds[7,]<-c(15,10);
-        m.bounds[8,]<-c(15,15);
-        m.bounds[9,]<-c(20,10);
-        m.bounds[10,]<-c(25,5);
-        colnames(m.bounds)<-c("UB","LB");
         
-        while (ibest < length(v.bests)) {
-            ibest <- ibest + 1
+        
+        #while (ibest < nrow(m.bounds)) {
+        #   ibest <- ibest + 1
+            ibest<-6;   # the best run so far
             m.pos <- 0 * m.rank
             m.pos[m.rank > m.bounds[ibest,1]]     <- 1;
-            m.pos[m.rank < m.bounds[ibest,2]]     <- -1;
-            m.signs <- sign(m.pos)
+            #tougher short criterion
+            shortable<-(m.rank<m.bounds[ibest,2])*1+(m.signr<0)*1
+            
+            m.pos[shortable==2]     <- -1;
+            #bridge small gaps in positions
+            x<-m.pos[,1]
+            m.pos<-apply(m.pos,2,function(x) f.delay(x))
+            
+            m.signs <- sign(m.pos);
             mabs <- abs(m.pos)
             m.w <- prop.table(mabs, 1)
             m.weights <- m.signs * m.w
             
-            #normalize the investments shares
             
             m.nror <- coredata(df.NRor.xts)
             m.prof <- m.weights * m.nror
@@ -123,18 +180,29 @@ f.GroupTrade <- function(l.Prices,df.etf.xts, horizon, ub, lb) {
             maintitle <-
                 paste("Total Prof= ",
                       prof,
-                      "H=",
-                      horizon,
+                      "W=",
+                      window,
                       "UB=",
-                      ub,
+                      m.bounds[ibest,1],
                       "LB=",
-                      lb,
+                      m.bounds[ibest,2],
                       sep = " ")
-            plot.xts(df.cumprof.xts[,31:32], main = maintitle)
+            plot.xts(df.cumprof.xts[,31:32], main = maintitle,legend.loc='topleft')
             df.prof.xts <- diff.xts(df.cumprof.xts)
+            #build the performance analytics
+            charts.PerformanceSummary(df.prof.xts[,31:32],rf=0,main=maintitle,legends.loc="topleft",p=0.95);
             
+            tabcapm<-table.CAPM(df.prof.xts[,31:32],Rb= v.etfror.xts,scale=252,Rf=.03);
+            tabstats<-table.AnnualizedReturns(df.prof.xts[,31:32],scale=252)
+            #tabstats<-table.CalendarReturns(df.prof.xts[,31:32])
+            idd<-paste("capm ",window,m.bounds[ibest,1], m.bounds[ibest,2],sep=" ")
+            l.TradeRes[[idd]]<-tabstats;
+            ret<-tabstats[1,1];
+            st<-tabstats[2,1];
+            trey<-tabcapm[12,1];
+            cat(idd,prof,"Ann Ror=",ret,"Stdev=", st, "Sharpe = ",tabstats[3,1],"Treynor=",trey,"\n")
             
-        }
+       # }
         #---
         tail(df.cumprof.xts)
         m.pos.xts<-as.xts(m.pos,order.by = index(df.NRor.xts));
@@ -144,6 +212,7 @@ f.GroupTrade <- function(l.Prices,df.etf.xts, horizon, ub, lb) {
         dff.xts<-merge.xts(df.Ror.xts[,1],df.CumRor.xts[,1],m.rank.xts[,1],m.pos.xts[,1],m.weights.xts[,1],df.NRor.xts[,1],m.prof.xts[,1],df.cumprof.xts[,1])
         names(dff.xts)<-c(cname,"CumRor","Rank","Pos","Weight","NRor","Prof","CumProf");
         #----
-        return(df.cumprof.xts)
+        
     }
+    return(m.pos)
 }
