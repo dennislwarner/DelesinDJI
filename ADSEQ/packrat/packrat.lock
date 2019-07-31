@@ -1,0 +1,277 @@
+PackratFormat: 1.4
+PackratVersion: 0.5.0
+RVersion: 3.5.3
+Repos: CRAN=https://mran.microsoft.com/snapshot/2019-04-15
+
+Package: BH
+Source: CRAN
+Version: 1.69.0-1
+
+Package: R6
+Source: CRAN
+Version: 2.3.0
+Hash: 8eccabbf292b5aba632985cde6406fc3
+
+Package: RColorBrewer
+Source: CRAN
+Version: 1.1-2
+
+Package: Rcpp
+Source: CRAN
+Version: 1.0.1
+Hash: 390ed5b5da840cec3e6f5c90c6ab23f7
+
+Package: askpass
+Source: CRAN
+Version: 1.1
+Requires: sys
+
+Package: assertthat
+Source: CRAN
+Version: 0.2.1
+
+Package: base64enc
+Source: CRAN
+Version: 0.1-3
+Hash: c590d29e555926af053055e23ee79efb
+
+Package: cli
+Source: CRAN
+Version: 1.1.0
+Requires: assertthat, crayon
+
+Package: colorspace
+Source: CRAN
+Version: 1.4-1
+
+Package: crayon
+Source: CRAN
+Version: 1.3.4
+
+Package: crosstalk
+Source: CRAN
+Version: 1.0.0
+Requires: R6, htmltools, jsonlite, ggplot2, lazyeval, shiny
+
+Package: curl
+Source: CRAN
+Version: 3.3
+Hash: b201f64e6e1469e8a3571c746ffa9059
+
+Package: data.table
+Source: CRAN
+Version: 1.12.2
+
+Package: digest
+Source: CRAN
+Version: 0.6.18
+Hash: 65f62365ec69ddd17230d2ffe891a6ab
+
+Package: dplyr
+Source: CRAN
+Version: 0.8.0.1
+Requires: R6, Rcpp, glue, magrittr, BH, assertthat, pkgconfig, plogr,
+    rlang, tibble, tidyselect
+
+Package: fansi
+Source: CRAN
+Version: 0.4.0
+
+Package: ggplot2
+Source: CRAN
+Version: 3.1.1
+Requires: digest, gtable, lazyeval, plyr, reshape2, rlang, scales,
+    tibble, viridisLite, withr
+
+Package: glue
+Source: CRAN
+Version: 1.3.1
+Hash: 660bbbe3803c7cf7c9489a7d99a9c0ed
+
+Package: gtable
+Source: CRAN
+Version: 0.3.0
+
+Package: hexbin
+Source: CRAN
+Version: 1.27.2
+
+Package: htmltools
+Source: CRAN
+Version: 0.3.6
+Requires: Rcpp, digest
+Hash: ef5869fcbca46a9551ce5b78954a6c2e
+
+Package: htmlwidgets
+Source: CRAN
+Version: 1.3
+Requires: htmltools, jsonlite, yaml
+
+Package: httpuv
+Source: CRAN
+Version: 1.5.1
+Requires: R6, Rcpp, BH, later, promises
+
+Package: httr
+Source: CRAN
+Version: 1.4.0
+Requires: R6, curl, jsonlite, mime, openssl
+
+Package: jsonlite
+Source: CRAN
+Version: 1.5
+Hash: 9c51936d8dd00b2f1d4fe9d10499694c
+
+Package: labeling
+Source: CRAN
+Version: 0.3
+
+Package: later
+Source: CRAN
+Version: 0.8.0
+Requires: Rcpp, BH, rlang
+
+Package: lazyeval
+Source: CRAN
+Version: 0.2.2
+
+Package: magrittr
+Source: CRAN
+Version: 1.5
+Hash: bdc4d48c3135e8f3b399536ddf160df4
+
+Package: mime
+Source: CRAN
+Version: 0.6
+Hash: 2ed8f98b8284ad733f3907fc6e2f1334
+
+Package: munsell
+Source: CRAN
+Version: 0.5.0
+Requires: colorspace
+
+Package: openssl
+Source: CRAN
+Version: 1.3
+Requires: askpass
+
+Package: packrat
+Source: CRAN
+Version: 0.5.0
+Hash: 498643e765d1442ba7b1160a1df3abf9
+
+Package: pillar
+Source: CRAN
+Version: 1.3.1
+Requires: cli, crayon, fansi, rlang, utf8
+
+Package: pkgconfig
+Source: CRAN
+Version: 2.0.2
+
+Package: plogr
+Source: CRAN
+Version: 0.2.0
+
+Package: plotly
+Source: CRAN
+Version: 4.9.0
+Requires: base64enc, digest, htmltools, jsonlite, magrittr,
+    RColorBrewer, crosstalk, data.table, dplyr, ggplot2, hexbin,
+    htmlwidgets, httr, lazyeval, promises, purrr, rlang, scales,
+    tibble, tidyr, viridisLite
+
+Package: plyr
+Source: CRAN
+Version: 1.8.4
+Requires: Rcpp
+
+Package: promises
+Source: CRAN
+Version: 1.0.1
+Requires: R6, Rcpp, magrittr, later, rlang
+
+Package: purrr
+Source: CRAN
+Version: 0.3.2
+Requires: magrittr, rlang
+
+Package: reshape2
+Source: CRAN
+Version: 1.4.3
+Requires: Rcpp, stringr, plyr
+
+Package: rlang
+Source: CRAN
+Version: 0.3.4
+
+Package: scales
+Source: CRAN
+Version: 1.0.0
+Requires: R6, Rcpp, RColorBrewer, labeling, munsell, viridisLite
+
+Package: scatterplot3d
+Source: CRAN
+Version: 0.3-41
+
+Package: shiny
+Source: CRAN
+Version: 1.3.1
+Requires: R6, digest, htmltools, jsonlite, mime, crayon, httpuv, later,
+    promises, rlang, sourcetools, xtable
+
+Package: sourcetools
+Source: CRAN
+Version: 0.1.7
+
+Package: stringi
+Source: CRAN
+Version: 1.4.3
+Hash: ed2a82fc7cc668c1345223d938cdfaf2
+
+Package: stringr
+Source: CRAN
+Version: 1.4.0
+Requires: glue, magrittr, stringi
+Hash: 67da32dbb2a7a16f2ef124336358e54a
+
+Package: sys
+Source: CRAN
+Version: 3.1
+
+Package: tibble
+Source: CRAN
+Version: 2.1.1
+Requires: cli, crayon, fansi, pillar, pkgconfig, rlang
+
+Package: tidyr
+Source: CRAN
+Version: 0.8.3
+Requires: Rcpp, glue, magrittr, stringi, dplyr, purrr, rlang, tibble,
+    tidyselect
+
+Package: tidyselect
+Source: CRAN
+Version: 0.2.5
+Requires: Rcpp, glue, purrr, rlang
+
+Package: utf8
+Source: CRAN
+Version: 1.1.4
+
+Package: viridisLite
+Source: CRAN
+Version: 0.3.0
+
+Package: withr
+Source: CRAN
+Version: 2.1.2
+
+Package: xtable
+Source: CRAN
+Version: 1.8-3
+
+Package: yaml
+Source: CRAN
+Version: 2.2.0
+Hash: a5ad5616d83d89f8d84cbf3cf4034e13
