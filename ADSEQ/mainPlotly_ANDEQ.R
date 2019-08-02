@@ -49,6 +49,10 @@ stepsize       <- 0.01;   # how much to vary the allocation shares
 v.omegaWeights <- seq(from=minparm ,to =maxparm, by = stepsize);
 v.thetaWeights <- v.omegaWeights;   #same grid for K share
 
+#set up iteration over Info Kap Amounts
+v.JSize<-seq(from=sqrt(200),to=200,length.out=20); #20 values with equal gap between them 
+df.sizeRes<-data.frame(mattrix(0,length(0,v.JSize),4));
+names(df.sizeRes)<-c("Jamt","omegaMax","thetaMax","RMax")
 # define a matrix to hold the resulting coordinates for the two input parameters (omega and theta) and the resulting revenue R
 # there will be one row for each solution tried
 # the number of rows will be the product of the number of each input parameter
@@ -67,32 +71,39 @@ maxR<-0;
 count<-0;
 iJ<-0;
 iL<-0;
-for(omega in v.omegaWeights){
-    iJ<-iJ+1;
-    m.X[iJ+1,1]<-omega*J;
-    iL<-0;
-    for(theta in v.thetaWeights){
-        iL<-iL+1;
-        m.X[1,iL+1]<-theta*L;
-        A<-f.A(omega,J,theta,L,alpha);
-        B<-f.B(omega,J,theta,L,beta);
-        R<-p*A+q*B;
-        m.X[iJ+1,iL+1]<-R;
-        #round answers for clean output
-        A<-round(A,digits=3);
-        B=round(B,digits=3);
-        R=round(R,digits=3);
-        count<-count+1;
-       m.Z[count,]<-c(omega*J,theta*L,R);
-        if(R>maxR){
-            maxR<-R;
-            omegaMax<-omega;
-            thetaMax<-theta;
-            Amax<-A;
-            Bmax<-B;
-            cat(omega,theta,"A=",A,"B=",B,"R=",R,"Max so Far=",maxR,"omegaMax=",
-                omegaMax,"thetaMax=",thetaMax,"Amax=",Amax,"Bmax=",Bmax,"\n");
-        }}}
+iSIZE<-0;  
+for(J in v.JSize){   #egin loop over a
+    iSIZE<-iSIZE+1;
+
+    for(omega in v.omegaWeights){
+        iJ<-iJ+1;
+        m.X[iJ+1,1]<-omega*J;
+        iL<-0;
+        for(theta in v.thetaWeights){
+            iL<-iL+1;
+            m.X[1,iL+1]<-theta*L;
+            A<-f.A(omega,J,theta,L,alpha);
+            B<-f.B(omega,J,theta,L,beta);
+            R<-p*A+q*B;
+            m.X[iJ+1,iL+1]<-R;
+            #round answers for clean output
+            A<-round(A,digits=3);
+            B=round(B,digits=3);
+            R=round(R,digits=3);
+            count<-count+1;
+            m.Z[count,]<-c(omega*J,theta*L,R);
+            if(R>maxR){
+                maxR<-R;
+                omegaMax<-omega;
+                thetaMax<-theta;
+                Amax<-A;
+                Bmax<-B;
+                cat(omega,theta,"A=",A,"B=",B,"R=",R,"Max so Far=",maxR,"omegaMax=",
+                    omegaMax,"thetaMax=",thetaMax,"Amax=",Amax,"Bmax=",Bmax,"\n");
+            }
+          }
+    }
+}
 
 #----Calculations are done,  store the output in graphic and table form
 
