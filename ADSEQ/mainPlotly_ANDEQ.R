@@ -50,34 +50,49 @@ stepsize       <- 0.01;   # how much to vary the allocation shares
 v.omegaWeights <- seq(from=minparm ,to =maxparm, by = stepsize);
 v.thetaWeights <- v.omegaWeights;   #same grid for K share
 
-#set up iteration over Info Kap Amounts
-v.JSize<-seq(from=sqrt(200),to=200,length.out=20); #20 values with equal gap between them 
-df.sizeRes<-data.frame(matrix(0,length(v.JSize),4));
-names(df.sizeRes)<-c("Jamt","omegaMax","thetaMax","RMax")
+#set up iteration over Info Kap exponents
+v.phi<-seq(from=.5,to=1.0,length.out=51); #50 values with equal gap between them 
+#add the .729 specific value
+v.phi<-sort(c(v.phi,0.729));
+
+df.sizeRes<-data.frame(matrix(0,length(v.phi),4));
+#=======
+
+
+names(df.sizeRes)<-c("phi","omegaMax","thetaMax","RMax")
 # define a matrix to hold the resulting coordinates for the two input parameters (omega and theta) and the resulting revenue R
 # there will be one row for each solution tried
 # the number of rows will be the product of the number of each input parameter
 #also define an equivalent NxN matrix to enable a simple heat-map type numeric display in excel
-NN<-length(v.omegaWeights);
 
 Nomega<-length(v.omegaWeights);
 Ntheta<-length(v.thetaWeights);
-NJ    <-length(v.JSize);
-Nrows<- Nomega*NthetaJ;
+Nphi    <-length(v.phi);
+Nrows<- Nomega*Ntheta*Nphi;
 m.Z <- matrix(0,Nrows,3)
 colnames(m.Z)<-c("Info Cap","Labor","R")
 
 
+#=======
+phi<-v.phi[2];
+omega<-v.omegaWeights[2];
+theta<-v.thetaWeights[2];
+
+
+
 l.Bests<-list();
-iSIZE<-0;  
-#----Bedgin Nested Loops
-while(iSIZE<NJ){
-    count<-0;
-    iSIZE<-iSIZE+1;
-    J<-v.JSize[iSIZE];
-    cat("Beginning J=",J,"\n");
+iphi<-0;  
+ count<-0;
+
+while(iphi<Nphi){
+
+    iphi<-iphi+1;
+    phi<-v.phi[iphi];
+    J<-200^phi
+   
+    cat("Beginning phi=",phi,"\n");
     # define a matrix with rows=Nrows and 3 columns , distinct for each JSize
-    m.X <-matrix(0,NN+1,NN+1); 
+    m.X <-matrix(0,Nomega+1,Ntheta+1); 
     maxR<-0;    #initialize the solution value;
     iomega<-0;
     while(iomega<Nomega){
@@ -100,19 +115,27 @@ while(iSIZE<NJ){
             m.Z[count,]<-c(omega*J,theta*L,R);
             #---Capture new maximums
             if(R>maxR){
-                v.max<-c(TotalInfoCap=J,omegaMax=omega,thetaMax=theta,JMax=omega*J,LMax=theta*L,AMax=A,BMax=B,RMax=R);
+                v.max<-c(phi=phi,
+                         Jamt=round(J,digits=3),
+                         omegaOpt=omega,
+                         JMax=round(omega*J,digits=3),
+                         thetaOpt=theta,
+                         Lopt=round(theta*L,digits=3),
+                         AOpt=round(A,digits=2),
+                         BOpt=round(B,digits=2),
+                         ROpt=round(R,digits=3));
                 maxR<-R;
-                l.Bests[[iSIZE]]<-data.frame(t(v.max));
+                l.Bests[[iphi]]<-data.frame(t(v.max));
             }
         }
     }
-    maintitle<-paste("Revenue where InfoCap (J) = ",J,sep="");
-    
-    scatterplot3d(m.Z,highlight.3d = FALSE,col.axis="blue", col.grid="lightblue",
-                  main=maintitle, pch=1,xlab="InfoCap used for A",ylab="Labor used for A",
-                  grid=TRUE,color="red");
+    # maintitle<-paste("Revenue where InfoCap exponent = ",phi,sep="");
+    # 
+    # scatterplot3d(m.Z,highlight.3d = FALSE,col.axis="blue", col.grid="lightblue",
+    #               main=maintitle, pch=1,xlab="InfoCap used for A",ylab="Labor used for A",
+    #               grid=TRUE,color="red");
     
 }
 df.Bests<-list_df2df(l.Bests)[,-1];
-fnout<-"MaxTable_20Jsizes.csv";
+fnout<-"OptTable_VaryPhi.csv";
 write.csv(df.Bests,file=fnout);

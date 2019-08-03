@@ -56,7 +56,9 @@ suppressMessages(library(ROI));
 suppressMessages(library(ROI.plugin.quadprog));
 suppressMessages(library(ROI.plugin.glpk));
 suppressMessages(library(memisc));
+suppressMessages(library(NCmisc));
 #suppressMessages(library(installr));
 #check.for.updates.R()
 #install.R() 
-
+list.functions.in.file("1_TradingSimulator.R", alphabetic = TRUE)
+rfile <- file.choose();
