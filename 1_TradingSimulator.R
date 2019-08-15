@@ -39,8 +39,9 @@ while(isource<Nfiles){
 library(stats);
 library(readr);
 library(magrittr);
-library(xts);
-library(PerformanceAnalytics);
+library(qdapTools);
+suppressMessages(library(xts));
+suppressMessages(library(PerformanceAnalytics));
 #-----Run source files
 isource<-0;
 while(isource<Nfiles){
@@ -91,9 +92,11 @@ colnames(m.bounds)<-c("UB","LB");
 v.windows <- c(5,10,20,65,130,261,522);
 #v.windows<-c(65)
 #f.GroupTrade<-function(l.Prices,horizon,ub,lb)
-m.pos<-f.DistinctTrade(l.Prices,df.etf.xts,m.bounds,v.windows);
-plot.xts(df.TotalProf.xts)
-
+m.weights<-f.DistinctTrade(l.Prices,df.etf.xts,m.bounds,v.windows);
+#plot.xts(df.TotalProf.xts)
+#save the algorithmically generated daily trading weights
+fnout<-"Weights.RDATA";
+save(m.weights,file=fnout)
 v.tickers<-df.DJDict$Symbol;
 while(iticker<length(l.Prices)){
     iticker<-iticker+1;
@@ -107,7 +110,7 @@ while(iticker<length(l.Prices)){
     #v.p.xts<-df.p.xts[,symb]
     #retrieve the price data for this symbol
     CASH<-100000;
-    v.signals<-m.pos[,iticker];
+    v.signals<-sign(m.weights[,iticker]);
     l.res<-f.executeTrades(df.xts,symb,cname,CASH,v.signals);
     #l.res<-f.searchTrades(df.xts,symb,cname,CASH);
     totalprofits<-totalprofits+l.res$PandL;

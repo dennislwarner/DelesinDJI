@@ -222,13 +222,14 @@ f.DistinctTrade <- function(l.Prices,df.etf.xts, m.bounds, v.windows) {
     
     #  1  df.Cumror.xts    cumulative adjusted close Rors
     #  2  df.Nror.xts      daily rates of return for next opening
-    #  3  df.Ror.xts       dail adjusted close Rors
+    #  3  df.Ror.xts       daily adjusted close Rors
     nstocks<-length(l.Prices);
     # initiate values of tracking structures
-    v.ibestWindow<-numeric(nstocks);
-    v.ibestboundary<-(nstocks);
-    v.bestsharpe<-rep(-100,nstocks);
-    m.bestpos<-matrix(0,nrow(df.Ror.xts),nstocks)
+    v.ibestWindow       <- numeric(nstocks);
+    v.ibestboundary     <- (nstocks);
+    v.bestsharpe        <- rep(-100,nstocks);
+    
+    m.bestpos<-matrix(0,nrow(df.etf.xts),nstocks)
     #----Prepare the required data frames----
     df.xts <- l.Prices[[1]];
     cname<-names(l.Prices)[1];
@@ -270,15 +271,15 @@ f.DistinctTrade <- function(l.Prices,df.etf.xts, m.bounds, v.windows) {
         dfkR.xts <- diff.xts(df.CumRor.xts, lag = window, na.pad = TRUE)
         dfkR.xts[is.na(dfkR.xts)] <- 0
         #don't use ranking when selecting signals methods for each stock
-        #m.rank                   <- t(apply(dfkR.xts, 1, rank))
-        #m.rank[is.na(dfkR.xts)]   <- 0
+        m.rank                   <- t(apply(dfkR.xts, 1, rank))
+        m.rank[is.na(dfkR.xts)]   <- 0
         #----
         #----For each upper and lower bound pairs compute the trade profitability----
         #    
         m.signr<-sign(dfkR.xts)
         m.pos                <- 0 * m.rank
         ibest <- 0
-        while (ibest < nrow(m.bounds)) {
+        while (ibest < nrow(m.bounds)) {    #loop through each set of upper and lower bounds
             ibest <- ibest + 1
             #ibest<-6;   # the best run so far
             m.pos <- 0 * m.rank
@@ -349,11 +350,11 @@ f.DistinctTrade <- function(l.Prices,df.etf.xts, m.bounds, v.windows) {
                 sharp<-tabstats[3,istock];
                 prof <- round(coredata(last(df.cumprof.xts[,istock])), digits = 2);
                 better<-sharp>v.bestsharpe[istock];
-                cat(istock,v.cnames[istock],sharp,v.bestsharpe[istock],better,prof,"\n");
+                #cat(istock,v.cnames[istock],sharp,v.bestsharpe[istock],better,prof,"\n");
                 if(better){
                     v.bestsharpe[istock]<-sharp;
                     v.ibestboundary[istock]<-ibest;
-                    v.ibestWindow<-iwindow;
+                    v.ibestWindow[istock]<-iwindow;
                     m.bestpos[,istock]<-m.pos[,istock];
                     cat(v.cnames[istock],istock,idd,prof,"Ann Ror=",ret,"Stdev=", st, "Sharpe = ",sharp,"Treynor=",trey,"\n")
                 }
@@ -375,5 +376,37 @@ f.DistinctTrade <- function(l.Prices,df.etf.xts, m.bounds, v.windows) {
         #----
         
     }
-    return(m.pos)
+    m.signs <- sign(m.pos);
+    mabs <- abs(m.pos)
+    m.w <- prop.table(mabs, 1)
+    m.weights <- m.signs * m.w;
+     m.nror <- coredata(df.NRor.xts)
+            m.prof <- m.weights * m.nror
+            
+            m.prof[is.na(m.prof)] <- 0
+            
+            m.cumprof <- apply(m.prof, 2, cumsum)
+            
+            v.totalprof <- rowSums(m.cumprof)
+            m.cumprof <- cbind(m.cumprof, v.totalprof)
+            
+            colnames(m.cumprof)[ncol(m.cumprof)] <- "Total"
+            
+            df.cumprof.xts <-
+                as.xts(m.cumprof, order.by = index(df.NRor.xts))
+            df.cumprof.xts$etf<-cumsum(v.etfror.xts);
+            prof <-
+                round(coredata(last(df.cumprof.xts$Total)), digits = 2)
+            
+            maintitle <-
+                paste(
+                      "W=",
+                      window,
+                      "UB=",
+                      m.bounds[ibest,1],
+                      "LB=",
+                      m.bounds[ibest,2],
+                      sep = " ")
+            plot.xts(df.cumprof.xts[,31:32], main = maintitle,legend.loc='topleft')
+    return(m.weights)
 }
