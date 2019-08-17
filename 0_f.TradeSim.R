@@ -60,29 +60,36 @@ f.closePosition<-function(df.position,curprice,t){
     return(df.position);
 }
 f.makeTrade<-function(df.traderecord,symb,adate,desiredpos,shares,curprice,cname,idcode){
-    df.traderecord$Symbol<-symb;
-    df.traderecord$ActivityDate<-adate;
-    if(desiredpos<0){df.traderecord$Type<-"Short"}else{df.traderecord$Type<-"Margin"};
-    df.traderecord$Quantity<-shares;
-    df.traderecord$price<-curprice;
-    df.traderecord$amount<-shares*curprice;
-    df.traderecord$Commission<-5;
+    df.traderecord$Symbol        <- symb;
+    df.traderecord$ActivityDate  <- adate;
+    if(desiredpos<0){
+            df.traderecord$Type<-"Short"
+        }else{
+            df.traderecord$Type<-"Margin"
+        }
+    df.traderecord$Quantity    <- shares;
+    df.traderecord$price       <- curprice;
+    df.traderecord$Amount      <- shares*curprice;
+    df.traderecord$Commission  <- 5;
     return(df.traderecord); 
 }
 f.openPosition<-function(df.position,desiredpos,curprice,t,Amt,adate){
-    df<-df.position;
+    df          <- df.position;
     df$position <- desiredpos;
-    df$Cash<-Amt;
+    df$Cash     <- Amt;
     #how many shares to buy or sell?
-    df$dayon<-t;
-    df$priceon<-curprice;
-    df$shares<-floor(df$Cash/curprice);
+    df$dayon    <- t;
+    df$priceon  <- curprice;
+    df$curprice <- curprice;
+    df$shares   <- floor(df$Cash/df$priceon);
     #f.makeTrade<-function(df.traderecord,symb,adate,desiredpos,shares,curprice,cname,idcode){
-    idcode<-t+iticker;shares<-df$shares;
-    df.traderecord<-  f.makeTrade(df.traderecord,symb,adate,desiredpos,df$shares,curprice,cname,t+iticker)
-    df$Commissions<-5;
+    idcode<-t+iticker;
+    
+    df$commissions<-5;
     df$Cash<-df$Cash - df$shares * curprice;
-    return(df);
+    df.position<-df;
+    
+    return(df.position);
 }
 
 f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
@@ -91,19 +98,18 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
         v.nop               <-c(coredata(df.xts$Open)[-1],last(df.xts$Open))
         df.xts$nop         <-v.nop;
         df.xts$chnop       <-c(0,diff(df.xts$nop,na.pad=FALSE));
-        dfr<-f.xts2df(df.xts)
+        dfr         <- f.xts2df(df.xts)
         names(dfr)
-        dfr$signals<-v.signals;
-        l.positions<-list();
-        l.trades<-list();
-        df.position<-f.initPosition(symb,100000);
-        df.traderecord<-f.initTradeRecord(symb,cname);
-        numtrades<-0;
-        numpositions<-0;
-        t<-0;N<-nrow(dfr);
-        CumulativeProfits<-0;
-        firstpos<-min(which(v.signals!=0));
-        t<-firstpos-1;
+        dfr$signals     <- v.signals;
+        l.positions     <- list();
+        l.trades        <- list();
+        df.position     <- f.initPosition(symb,100000);
+        df.traderecord  <- f.initTradeRecord(symb,cname);
+        numtrades       <- 0;
+        numpositions    <- 0;
+        t<-0; N<-nrow(dfr); CumulativeProfits<-0;
+        firstpos    <- min(which(v.signals!=0));
+        t           <- firstpos-1;
         while(t<N){
             #---New day,   Gather the variables needed
             t          <- t+1;
@@ -118,7 +124,7 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
                 numpositions<-numpositions+1;
             };
             #  Should the position be changed?----------------------------------------------------------------
-            if(desiredpos!=currentpos){
+            if(desiredpos !=currentpos){
                 cat("Trade ",t,as.character(adate),currentpos,desiredpos,"\n");
                 #----if there is an open position close it out---------
                 if(currentpos!=0){
@@ -132,13 +138,15 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
                     
                 }
                 # open the new position------------------------------------------------------------------------
-                if(desiredpos!=0){
+                if( desiredpos!=0){
                     #open pos
+                    Amt<-100000;
+                    df.position           <- f.openPosition(df.position ,desiredpos,curprice,t,100000,adate);
+                    shares<-df$shares;
                     
-                    df.position    <-f.openPosition(df.position ,desiredpos,curprice,t,100000,adate);
-                    df.traderecord<-f.makeTrade(df.traderecord,symb,adate,desiredpos,df.position$shares,curprice,cname,t+iticker);
-                    numtrades<-numtrades+1;
-                    l.trades[[numtrades]]<-df.traderecord;
+                    df.traderecord        <- f.makeTrade(df.traderecord,symb,adate,desiredpos,df.position$shares,curprice,cname,t+iticker);
+                    numtrades             <- numtrades+1;
+                    l.trades[[numtrades]] <- df.traderecord;
                     
                     cat("Opening Position",desiredpos,"Shares ",df.position$shares, "at",curprice,t,"\n");
                 }
@@ -161,6 +169,9 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
         }
         df.positionHistory<-list_df2df(l.positions);
         df.tradeHistory<-list_df2df(l.trades);
+        #examine the trae history
+        write.csv(df.positionHistory,"PositionHistory.csv")
+        write.csv(df.tradeHistory,"TradeHistory.csv");
         #cat("Closing Position",currentpos,df.position$pandl,t,CumulativeProfits,"\n");
         l.Results<-list(Trades=df.tradeHistory,Positions=df.positionHistory,CumulativeProfits=CumulativeProfits);
         return(l.Results);

@@ -92,30 +92,32 @@ colnames(m.bounds)<-c("UB","LB");
 v.windows <- c(5,10,20,65,130,261,522);
 #v.windows<-c(65)
 #f.GroupTrade<-function(l.Prices,horizon,ub,lb)
-m.weights<-f.DistinctTrade(l.Prices,df.etf.xts,m.bounds,v.windows);
+m.weights    <- f.DistinctTrade(l.Prices,df.etf.xts,m.bounds,v.windows);
 #plot.xts(df.TotalProf.xts)
 #save the algorithmically generated daily trading weights
-fnout<-"Weights.RDATA";
+fnout        <-"Weights.RDATA";
 save(m.weights,file=fnout)
-v.tickers<-df.DJDict$Symbol;
+ss_m.weights <- load(fnout)
+v.tickers    <- df.DJDict$Symbol;
+iticker      <- 0;
 while(iticker<length(l.Prices)){
-    iticker<-iticker+1;
-    symb<-v.tickers[[iticker]];
+    iticker     <- iticker+1;
+    symb        <- v.tickers[[iticker]];
     #description-v.descriptions[[iticker]]
-    cname<-as.character(df.DJDict[iticker,"Description"])
+    cname       <- as.character(df.DJDict[iticker,"Description"])
     cat(iticker,symb,cname,"\n");
    
-    df.xts<-l.Prices[[symb]]
+    df.xts        <-l.Prices[[symb]]
     plot.xts(df.xts[,1:4],main=cname)
     #v.p.xts<-df.p.xts[,symb]
     #retrieve the price data for this symbol
-    CASH<-100000;
-    v.signals<-sign(m.weights[,iticker]);
-    l.res<-f.executeTrades(df.xts,symb,cname,CASH,v.signals);
-    #l.res<-f.searchTrades(df.xts,symb,cname,CASH);
-    totalprofits<-totalprofits+l.res$PandL;
-    totaltrades<-totaltrades+l.res$NumTrades;
-    ppt<-totalprofits/totaltrades;
+    CASH          <- 100000;
+    v.signals     <- sign(m.weights[,iticker]);
+    l.res         <- f.executeTrades(df.xts,symb,cname,CASH,v.signals);
+    #l.res        <- f.searchTrades(df.xts,symb,cname,CASH);
+    totalprofits  <- totalprofits+l.res$PandL;
+    totaltrades   <- totaltrades+l.res$NumTrades;
+    ppt           <- totalprofits/totaltrades;
     cat(l.res$symbol,"Num Trades=",l.res$NumTrades, "P&L=",l.res$PandL,"Totals=",totaltrades,totalprofits,ppt,"\n");
     #cat(iticker,symb,"\n");
 }
