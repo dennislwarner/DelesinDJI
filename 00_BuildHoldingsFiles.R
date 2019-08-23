@@ -52,12 +52,13 @@ while(ihold<length(v.holdings)){
     df.x<-cbind(df.y,df.x[,etfpos]);
     names(df.x)[ncol(df.x)]<-etf;
   
-    # df.xx<-data.frame(df.xx,v.target);
-    # names(df.xx)[ncol(df.xx)]<-etf
-    df.x.xts<-df.xx%>%f.df2xts()
+   # df.xx<-data.frame(df.x,v.target);
+   # names(df.xx)[ncol(df.xx)]<-etf
+    df.x.xts<-df.x%>%f.df2xts()
     
     
     fnout<-paste(dirPackages,"/",etf,"_P.xts",sep="");
     save(df.x.xts,file=fnout)
     cat(ihold,etf,"---",etfCO$Name,"#Companies = ",nrow(df.CO)-1,"\n");
 }
+toc();

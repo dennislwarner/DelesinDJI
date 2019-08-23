@@ -42,11 +42,13 @@ f.divSum<-function(x,y,z){
     vv<-na.locf(v,na.rm=FALSE);
     return(vv)
 }
-f.getPricesA <- function(v.goodSymbol) {
-    it <- 1
-        l.prices<-list();
-    for (it in c(1:length(v.goodSymbol))) {
-        itick <- v.goodSymbol[it]
+f.getPricesA <- function(v.tickers) {
+    it <- 0;
+    N<-length(v.tickers);
+    l.prices<-list();
+    while(it<N){
+        it<-it+1;
+        itick <- v.tickers[it]
         #get adjusted close..................
         if(str_sub(itick,1,3)=="EOD"){
             fn <- paste(itick, ".11", sep = "")
@@ -55,22 +57,10 @@ f.getPricesA <- function(v.goodSymbol) {
         }
         fn2<-paste("EOD/",itick,  sep = "")
         df.xts<-Quandl(fn2,api_key = '1yhZtVwmHpc7qys3iMuJ',
-                   type = "xts", start_date = "2003-01-01");#[,8:12];
+                   type = "xts", start_date = "2003-01-01");
         l.prices[[itick]]<-df.xts;
-        #,
-        #            qopts.columns=c("Adj_Open","Adj_High","Adj_Low","Adj_Close","Adj_Volume"));
-        # # fn<-paste("EOD/",itick,sep="");
-        # df.cl.xts <- Quandl(fn, api_key = '1yhZtVwmHpc7qys3iMuJ',
-        #                 type = "xts", start_date = "2003-01-01")
-        # if(it==1){
-        #     df.xts<-df.cl.xts;
-        #     names(df.xts)[1]<-itick;
-        # }else{
-        #     df.xts<-merge.xts(df.xts,df.cl.xts,join='left');
-        #     names(df.xts)[ncol(df.xts)]<-itick;
-        # }
     }
-    return(l.prices);
+    return(l.prices);    
 }
 f.getSPY <- function() {
     df.SPY <- Quandl('EOD/SPY', api_key = '1yhZtVwmHpc7qys3iMuJ',
