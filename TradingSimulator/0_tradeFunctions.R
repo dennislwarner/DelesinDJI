@@ -216,19 +216,34 @@ f.TradeSim<- function(df.xts,v.signals,symb,cname,CASH) {
             if((sign(curshares)*sign(desiredshares))<0){
                 # its a reversal, break into two transactions
                 valuetotrade<--curvalue;
-                df.trades  <- f.makeTrade(df.trades,symb,adate,-curshares,0,curprice,cname,t+iticker);
-                sharestotrade<--curshares;
-                cat(t,as.character(as.Date(adate)),0,sharestotrade,-curshares,0,valuetotrade,"\n")
-                df.trades  <- f.makeTrade(df.trades,symb,adate,desiredshares,0,curprice,cname,t+iticker);
-                valuetotrade<-desiredvalue;
-                cat(t,as.character(as.Date(adate)),desiredshares,desiredshares,0,desiredvalue,valuetotrade,"\n");
+                # Close out the existing position-----
+                startshares<-curshares;
+                df.trades  <- f.makeTrade(df.trades,symb,adate,
+                                          sharestotrade = -curshares,
+                                          desiredshares=0,curprice,cname,t+iticker);
                 
+                sharestotrade<--curshares;
+                endshares<-0;
+                cat(t,as.character(as.Date(adate)),startshares,endshares,"\n")
+                #  now establish the desired position with a second transaction.
+                startshares<-0;
+                endshares<-desiredshares;
+                df.trades  <- f.makeTrade(df.trades,symb,adate,
+                                          sharestotrade = desiredshares,
+                                          desiredshares=desiredshares,curprice,cname,t+iticker);
+                valuetotrade<-desiredvalue;
+                cat(t,as.character(as.Date(adate)),startshares,endshares,"\n");
+                curshares<-desiredshares;
+                #f.makeTrade<-function(df.trades,symb,adate,sharestotrade,desiredshares,curprice,cname,idcode){
             }else{
+                startshares<-curshares;
                 sharestotrade  <- desiredshares-curshares;
                 df.trades      <- f.makeTrade(df.trades,symb,adate,sharestotrade,desiredshares,curprice,cname,t+iticker);
                 curshares      <- curshares+sharestotrade;
+                endshares<-curshares;
+                cat(t,as.character(as.Date(adate)),startshares,endshares,"\n");
             }
-             cat(t,as.character(as.Date(adate)),desiredshares,sharestotrade,curshares,desiredvalue,valuetotrade,"\n");
+             
         }
         
     }
@@ -500,3 +515,99 @@ f.DistinctTrade <- function(l.Prices,df.etf.xts,v.windows) {
     plot.xts(df.cumprof.xts[,31:32], main = maintitle,legend.loc='topleft')
     return(m.pos)
 }
+f.derivePositions<-function(df.AllTrades,l.Prices){
+    # construct position reports for each day given the trading record and the daily prices
+    # there is a different position each day
+    #create sorage structures
+    l.DailyPositions           <- list();
+    df.SymTrades               <- dplyr::arrange(df.AllTrades,Symbol,ActivityDate);
+    df.AllTrades$Date          <- as.Date(df.AllTrades$ActivityDate);
+    # df.SymTrades.xts<-f.df2xts(df.SymTrades)
+    v.tickers<-sort(unique(df.SymTrades$Symbol));
+    #loop through each ticker symbol, build a running position,  
+    #for any day where there is a non-zero position,add it to the positions for that day
+    
+    iticker<-0;
+    #   df.P.xts    Closing prices for this security
+    #   df.T        transactions records for security
+    #   df.Pos      working data frame containing daily positions and all trades aligned
+    #
+    #
+    #----Loop through every day of positions
+    #----the challenge comes when there is a reversal
+    #table(df.SymTrades$ActivityDate)
+    while(iticker<length(v.tickers)){
+        iticker       <- iticker+1;
+        symb          <- v.tickers[[iticker]];
+        df.P.xts      <- l.Prices[[symb]];
+        N             <- nrow(df.P.xts)
+        df.T <- dplyr::filter(df.AllTrades,Symbol==symb)%>%dplyr::select(TradeType=Type,Transaction,TQ=Quantity,price,Amount,Date);
+        fnout<-"df.T.csv";write.csv(df.T,file=fnout);
+        df.tdates<-as.data.frame(table(df.T$Date));
+        names(df.tdates)[1]<-"Date";
+        df.tdates$Date<-as.Date(df.tdates$Date)
+        v.seq<-seq_along(index(df.P.xts))
+        df.td<-data.frame(Date=index(df.P.xts),v.seq);
+        df.Trades<-merge(df.td,df.tdates,by="Date",all=TRUE);
+        df.J<-merge(df.td,df.T,by="Date",all=TRUE);
+        cat(iticker,symb,nrow(df.Trades),"\n");
+        summary(df.Trades)
+        #fnout<-"df.Trades.csv";write.csv(df.Trades,file=fnout)
+        #initialize daily positions data frame for this symbol
+        df.positions         <- f.initPositions(symb,N);
+        df.positions$Date    <- index(df.P.xts);
+        df.positions$Last    <- as.numeric(df.P.xts$Close);
+        
+        df.Pos              <- merge.data.frame(df.positions, df.T, by="Date", all=TRUE);
+        df.Pos[is.na(df.Pos)]<-0
+        fnout<-"df.Pos.csv";write.csv(df.Pos,file=fnout);
+        #loop through every row, updating the daiy positions for this stock
+        j<-0;
+        curpos<-0;
+        curcost<-0;
+        while(j<nrow(df.Pos)){
+            j<-j+1;
+            curprice<-df.Pos$Last[j];
+            adate<-df.Pos$Date[j];
+            #curvalue<-curpos*curprice;
+            
+            #if(!is.na(df.Pos$Transaction[j])){
+            # a transaction has occurred....update the position
+            tq<-df.Pos$TQ[j];        #quantity traded
+            tp<-df.Pos$price[j];
+            tdirection<-ifelse(df.Pos$Transaction[j]=="Buy",1,-1);
+            curpos<-curpos+tdirection*tq;
+            curvalue<-curpos*curprice;
+            tamt<-df.Pos$Amount[j];
+            #----keep track of total cost of position
+            ecost<-ifelse(j>1,df.Pos$TotalCost[j-1],0);#eexisting cost
+            tcost<-ecost+tamt;
+            avecost<-tcost/curpos;
+            
+            posdir<-sign(curpos);
+            df.Pos$quantity[j]<-abs(curpos);
+            df.Pos$MarketValue[j]<-posdir*df.Pos$Last[j]*df.Pos$quantity[j];
+            
+            df.Pos$AvePrice[j]<-avecost;
+            df.Pos$TotalCost[j]<-tcost;
+            df.Pos$OpenPandL[j]<-df.Pos$MarketValue[j]-df.Pos$TotalCost[j];
+            df.Pos$OpenPerShare[j]<-df.Pos$OpenPandL[j]/abs(curpos)
+            # }else{
+            #     
+            #}
+            
+            #updat the df.Pos data.frame
+            # df.Pos$MarketValue[j]<-curvalue;
+            # df.Pos$OpenPandL[j]<- df.Pos$MarketValue[j]-df.Pos$TotalCost[j];
+            # df.Pos$OpenPerShare[j]<-df.Pos$OpenPandL[j]/df.Pos$quantity[j];
+            # df.Pos$
+            cat(j,symb,adate,curpos,curprice,curvalue,"\n");
+        }
+        # fnout               <-paste("D:/Projects/DDJIOutPut/Pos_",symb,".csv",sep="");
+        # write.csv(df.Pos,file=fnout);
+        l.DailyPositions[[symb]]<-df.Pos;
+    }   
+    df.AllPos<-list_df2df(l.DailyPositions);
+    return(df.AllPos);
+} 
+    
