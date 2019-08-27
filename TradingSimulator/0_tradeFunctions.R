@@ -561,21 +561,71 @@ f.derivePositions<-function(df.AllTrades,l.Prices){
         df.Pos              <- merge.data.frame(df.positions, df.T, by="Date", all=TRUE);
         df.Pos[is.na(df.Pos)]<-0
         fnout<-"df.Pos.csv";write.csv(df.Pos,file=fnout);
+        #-----------------------------------------------------------------------------------------------------------
+        #     Dexcription of df.Positions data frame
+        #-----------------------------------------------------------------------------------------------------------
+        #  Column             |    Long Positions    |   Short Positions |
+        #                     |                      |                   |
+        #    Date             |                      |                   |
+        #   Symbol            |                      |                   |
+        #   Position          |    Long              |     Short         |
+        #   quantity          |    +20               |     -20           |
+        #   AvePrice          |    8.50              |      8.50         |
+        #   Last              |    11.50             |     11.50         |
+        #   OpenPandL         |    60.00             |     -60.00        |
+        #   OpenPerShare      |     3.00             |      -3.00        |
+        #   OpenPLpct         |                      |                   |
+        #   TotalCost         |    8.50 x 20 = 170   | 8.50 x -20 = -170 |                    |                   |
+        #   MarketValue       |    11.50 x 20= 230   |11.50 x -20 = -230 |
+        #   Acct
+        #  
+        # Columns in the df.Position data frames
         #loop through every row, updating the daiy positions for this stock
+        #Quantity     # shares held,   positive for long positions, negative for Short
+        #
         j<-0;
-        curpos<-0;
+        curpos<-"";
         curcost<-0;
+        curquantity<-0;
+        realized<-0;
         while(j<nrow(df.Pos)){
             j<-j+1;
-            curprice<-df.Pos$Last[j];
-            adate<-df.Pos$Date[j];
-            #curvalue<-curpos*curprice;
+            curprice            <- df.Pos$Last[j];
+            adate               <- as.character(df.Pos$Date[j]);
+            ttype               <- df.Pos$TradeType[j];
+            price               <- df.Pos$price[j];
+            last                <- df.Pos$Last[j];
+            pandl               <- 0;
             
-            #if(!is.na(df.Pos$Transaction[j])){
+            if(ttype != 0){
+                curpos            <- ifelse(ttype=="Margin","Long","Short");
+                tdirection        <- ifelse(df.Pos$Transaction[j]=="Buy",1,-1);
+                quantity          <- tdirection * df.Pos$TQ[j];
+                if(sign(curquantity)!=sign(quantity)){
+                    pandl<-quantity*(last-aveprice)
+                    realized <- realized+pandl;
+                }
+                curquantity       <- curquantity + quantity;
+                cost              <- price * quantity;
+                curcost           <- curcost + cost;
+                aveprice          <- curcost/curquantity;
+            }   
+                
+            marketvalue       <- last*curquantity;
+            openpandl         <- marketvalue - curcost;
+            openpandlpershare <- openpandl/curquantity;
+            cat(j,adate,curpos,curquantity,aveprice,last,openpandl,openpandlpershare,curcost,marketvalue,curpos,pandl,realized,"\n");
+            
+        }
+            
+            
+            
+            df,Pos$quantity[j]  <= quantity;
+            curcost
             # a transaction has occurred....update the position
-            tq<-df.Pos$TQ[j];        #quantity traded
+            tq          <- df.Pos$TQ[j];        #quantity traded
             tp<-df.Pos$price[j];
-            tdirection<-ifelse(df.Pos$Transaction[j]=="Buy",1,-1);
+            df.Pos$position[j]
             curpos<-curpos+tdirection*tq;
             curvalue<-curpos*curprice;
             tamt<-df.Pos$Amount[j];
@@ -586,6 +636,7 @@ f.derivePositions<-function(df.AllTrades,l.Prices){
             
             posdir<-sign(curpos);
             df.Pos$quantity[j]<-abs(curpos);
+            df.Pos$position[j]<-ifelse(curpos>0,"Long","Short");
             df.Pos$MarketValue[j]<-posdir*df.Pos$Last[j]*df.Pos$quantity[j];
             
             df.Pos$AvePrice[j]<-avecost;

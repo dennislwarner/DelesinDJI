@@ -135,4 +135,8 @@ write.csv(df.AllTrades,file=fnout);
 df.Positions<-f.derivePositions(df.AllTrades,l.Prices);
 fnout<-"D:/Projects/DDJIOutPut/AllPositions.csv";
 write.csv(df.Positions,file=fnout);
-
+fnout<-"D:/Projects/DDJIOutPut/AllPositions.csv";
+df.Positions<-read.csv(fnout);
+df.Pos<-df.Positions%>%dplyr::arrange(Date,symbol,X)
+df.G<-df.Pos%>%group_by(Date)
+df.G%>%summarise(TC=sum(TotalCost),MV=sum(MarketValue),SPandL=sum(OpenPandL))
