@@ -63,7 +63,7 @@ while(isource<Nfiles){
 
 #library(DMwR2)
 # lOAD THE PRICES FOR THE DIA etf---
-NEWRETRIEVE<-FALSE;
+NEWRETRIEVE<-TRUE;
 NEWGENERATE<-TRUE;
 
 #-----------------------------------------------------------------------
@@ -125,18 +125,95 @@ while(iticker<length(l.Prices)){
     v.signals     <- (m.pos[,iticker]);
     nt<-sum(abs(diff(v.signals)))
 if(length(v.signals)!=nrow(df.xts)){next}
-    df.trades     <-   f.TradeSim(df.xts,v.signals,symb,cname,CASH);
-    l.Trades[[length(l.Trades)+1]]<-df.trades
+    df.D     <-   f.TradeSim(df.xts,v.signals,symb,cname,CASH);
+    l.Trades[[length(l.Trades)+1]]<-df.D
 }
-df.AllTrades<-list_df2df(l.Trades)    
-fnout<-"D:/Projects/DDJIOutput/AllSimTrade.csv";
-write.csv(df.AllTrades,file=fnout);
+df.AllD<-list_df2df(l.Trades)    
+fnout<-"D:/Projects/DDJIOutput/AllD.csv";
+write.csv(df.AllD,file=fnout);
+df.dg<-df.AllD%>%dplyr::group_by(Date)
+df.dgsummar<-df.dg%>%summarise(MV=sum(abs(CurValue)),RZD=sum(TotalRealized),SPandL=sum(Openprof))%>%dplyr::mutate(TotalVal=MV+RZD);
+df.dgsummar.xts<-f.df2xts(df.dgsummar)
+plot.xts(df.dgsummar.xts$TotalVal)
+#--------------------------------------------------------------------------------------------
+#-------from the detail data  frame df.D....create the trade records mimicing those from Tradestation
+v.tickers<-sort(unique(df.AllD$Symbol))
+iticker<-0;
+while(iticker<length(v.tickers)){
+    iticker<-iticker+1;
+    symb<-v.tickers[iticker];
+    thisdict<-df.DJDict%>%dplyr::filter(Symbol==symb);
+    cname<-thisdict$Description;
+    df.dd<-df.AllD%>%dplyr::filter(Symbol==symb)
+    #df.Trades<-f.traderecstart(symb,cname)
+    df.Trades<-f.initTrades()
+    #find all the records in df.dd which translate to trades
+    df.ddtrades<-df.dd%>%dplyr::filter(TQ!=0)
+    
+    it<-0;
+    while(it<nrow(df.ddtrades)){
+        it<-it+1;
+        df.ddt<-df.ddtrades[it,];
+        df.Trades[nrow(df.Trades)+1,]<-f.traderecstart(symb,cname);
+        df.Trades$Quantity[it]<-abs(df.ddt$TQ)
+        df.Trades$ActivityDate[it]  <- df.ddt$Date;
+        df.Trades$Type[it]
+    }
+    
+    
+    
+    
+    
+    
+    N                          <- nrow(df.trades);
+    df.trades$Symbol[N]        <- symb;
+    
+    
+    startingshares<-desiredshares-sharestotrade;
+    if((startingshares<0)||(desiredshares<0)){
+        df.trades$Type[N]<-"Short"
+    }else{
+        df.trades$Type[N]<-"Margin"
+    }
+    # df.trades$Type[N]          <- ifelse(desiredshares>=0,"Margin","Short");
+    df.trades$Transaction[N]   <-ifelse(sharestotrade>0,"Buy","Sell");
+    
+    df.trades$Quantity[N]      <- abs(sharestotrade);
+    df.trades$price[N]         <- curprice;
+    df.trades$Amount[N]        <- abs(sharestotrade)*curprice;
+    df.trades$Commission[N]    <- 5;
+    df.trades$Order_ID[N]      <- idcode;
+    return(df.trades );   #return to f.tradesim
+    
+    
+    
+    
+    
+    
+    
+    df.trades[nrow(df.trades)+1,]<-f.traderecstart(symb,cname);
+}
 
-df.Positions<-f.derivePositions(df.AllTrades,l.Prices);
-fnout<-"D:/Projects/DDJIOutPut/AllPositions.csv";
+
+
+
+
+df.Positions    <- f.derivePositions(df.AllTrades,l.Prices);
+fnout           <- "D:/Projects/DDJIOutPut/AllPositions.csv";
 write.csv(df.Positions,file=fnout);
 fnout<-"D:/Projects/DDJIOutPut/AllPositions.csv";
-df.Positions<-read.csv(fnout);
+df.Positions<-read.csv(fnout,stringsAsFactors = FALSE);
 df.Pos<-df.Positions%>%dplyr::arrange(Date,symbol,X)
 df.G<-df.Pos%>%group_by(Date)
-df.G%>%summarise(TC=sum(TotalCost),MV=sum(MarketValue),SPandL=sum(OpenPandL))
+df.GSummar<-df.G%>%summarise(TC=sum(TotalCost),MV=sum(MarketValue),SPandL=sum(OpenPandL));
+#  build a large PDF output with tables and charts, by company
+iticker<-0;
+v.tickers<-sort(unique(df.Pos$symbol))
+while (iticker<length(l.Tfades)){
+    iticker<-iticker+1;
+    symb<-v.tickers[[iticker]];
+    df.G<-df.Pos%>%dplyr::filter(symbol==symb)
+    mv.xts<-as.xts(df.G$MarketValue,order.by=as.Date(df.G$Date));
+    plot.xts(mv.xts,main=symb)
+
+}  
