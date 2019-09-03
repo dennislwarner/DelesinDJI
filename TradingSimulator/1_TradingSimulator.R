@@ -139,6 +139,7 @@ plot.xts(df.dgsummar.xts$TotalVal)
 #-------from the detail data  frame df.D....create the trade records mimicing those from Tradestation
 v.tickers<-sort(unique(df.AllD$Symbol))
 iticker<-0;
+l.Trades<-list();
 while(iticker<length(v.tickers)){
     iticker<-iticker+1;
     symb<-v.tickers[iticker];
@@ -153,54 +154,42 @@ while(iticker<length(v.tickers)){
     it<-0;
     while(it<nrow(df.ddtrades)){
         it<-it+1;
+        
         df.ddt<-df.ddtrades[it,];
+        
+        
         df.Trades[nrow(df.Trades)+1,]<-f.traderecstart(symb,cname);
+        
+        df.Trades$TradeInd[it]<-"T";
+        df.Trades$Symbol[it]<-symb;
         df.Trades$Quantity[it]<-abs(df.ddt$TQ)
         df.Trades$ActivityDate[it]  <- df.ddt$Date;
-        df.Trades$Type[it]
+        df.Trades$Type[it]<-ifelse(((df.ddt$StartQ<0)||(df.ddt$EndQ<0)),"Short","Margin");
+        df.Trades$Transaction[it]<-ifelse((df.ddt$TQ>0),"Buy","Sell");
+        df.Trades$price[it]         <- df.ddt$Open;
+        df.Trades$Amount[it]        <- abs(df.ddt$TQ)*df.ddt$Open;
+        df.Trades$Commission[it]    <- 5;
+        id<-df.ddt$it
+        rn<-row.names(df.ddt)
+        id<-as.numeric(paste(rn,as.character(df.ddt$t),sep=""));
+        df.Trades$Order_ID[it]      <- id
     }
-    
-    
-    
-    
-    
-    
-    N                          <- nrow(df.trades);
-    df.trades$Symbol[N]        <- symb;
-    
-    
-    startingshares<-desiredshares-sharestotrade;
-    if((startingshares<0)||(desiredshares<0)){
-        df.trades$Type[N]<-"Short"
-    }else{
-        df.trades$Type[N]<-"Margin"
-    }
-    # df.trades$Type[N]          <- ifelse(desiredshares>=0,"Margin","Short");
-    df.trades$Transaction[N]   <-ifelse(sharestotrade>0,"Buy","Sell");
-    
-    df.trades$Quantity[N]      <- abs(sharestotrade);
-    df.trades$price[N]         <- curprice;
-    df.trades$Amount[N]        <- abs(sharestotrade)*curprice;
-    df.trades$Commission[N]    <- 5;
-    df.trades$Order_ID[N]      <- idcode;
-    return(df.trades );   #return to f.tradesim
-    
-    
-    
-    
-    
-    
-    
-    df.trades[nrow(df.trades)+1,]<-f.traderecstart(symb,cname);
+    l.Trades[[symb]]<-df.Trades
+   # return(df.trades );   #return to f.tradesim
 }
-
-
-
-
-
+df.AllTrades<-list_df2df(l.Trades)
+fnout<-"D:/Projects/DDJIOutput/AllTrades.csv";
+write.csv(df.AllTrades,file=fnout);
+#--------------------------------------------------------------------------------------------
+#-------from the detail data  frame df.D....create the position records mimicing those from Tradestation
 df.Positions    <- f.derivePositions(df.AllTrades,l.Prices);
 fnout           <- "D:/Projects/DDJIOutPut/AllPositions.csv";
 write.csv(df.Positions,file=fnout);
+
+
+
+
+
 fnout<-"D:/Projects/DDJIOutPut/AllPositions.csv";
 df.Positions<-read.csv(fnout,stringsAsFactors = FALSE);
 df.Pos<-df.Positions%>%dplyr::arrange(Date,symbol,X)

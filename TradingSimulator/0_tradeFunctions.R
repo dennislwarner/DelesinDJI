@@ -616,153 +616,188 @@ f.DistinctTrade <- function(l.Prices,df.etf.xts,v.windows) {
     plot.xts(df.cumprof.xts[,31:32], main = maintitle,legend.loc="topleft")
     return(m.pos)
 }
-f.derivePositions<-function(df.AllTrades,l.Prices){
-    # construct position reports for each day given the trading record and the daily prices
-    # there is a different position each day
-    #create sorage structures
-    l.DailyPositions           <- list();
-    df.SymTrades               <- dplyr::arrange(df.AllTrades,Symbol,ActivityDate);
-    df.AllTrades$Date          <- as.Date(df.AllTrades$ActivityDate);
-    # df.SymTrades.xts<-f.df2xts(df.SymTrades)
-    v.tickers<-sort(unique(df.SymTrades$Symbol));
-    #loop through each ticker symbol, build a running position,  
-    #for any day where there is a non-zero position,add it to the positions for that day
-    
+f.derivePositions2<-function(df.AllD){
+    l.DailyPositions<-list();
     iticker<-0;
-    #   df.P.xts    Closing prices for this security
-    #   df.T        transactions records for security
-    #   df.Pos      working data frame containing daily positions and all trades aligned
-    #
-    #
-    #----Loop through every day of positions
-    #----the challenge comes when there is a reversal
-    #table(df.SymTrades$ActivityDate)
+    v.tickers<-sort(unique(df.AllD$Symbol));
     while(iticker<length(v.tickers)){
-        iticker       <- iticker+1;
-        symb          <- v.tickers[[iticker]];
-        df.P.xts      <- l.Prices[[symb]];
-        N             <- nrow(df.P.xts)
-        df.T <- dplyr::filter(df.AllTrades,Symbol==symb)%>%dplyr::select(TradeType=Type,Transaction,TQ=Quantity,price,Amount,Date);
-        fnout<-"df.T.csv";write.csv(df.T,file=fnout);
-        df.tdates<-as.data.frame(table(df.T$Date));
-        names(df.tdates)[1]<-"Date";
-        df.tdates$Date<-as.Date(df.tdates$Date)
-        v.seq<-seq_along(index(df.P.xts))
-        df.td<-data.frame(Date=index(df.P.xts),v.seq);
-        df.Trades<-merge(df.td,df.tdates,by="Date",all=TRUE);
-        df.J<-merge(df.td,df.T,by="Date",all=TRUE);
-        cat(iticker,symb,nrow(df.Trades),"\n");
-        summary(df.Trades)
-        #fnout<-"df.Trades.csv";write.csv(df.Trades,file=fnout)
-        #initialize daily positions data frame for this symbol
+        iticker<-iticker+1;
+        symb<-v.tickers[iticker];
+        df<-df.AllD%>%dplyr::filter(Symbol==symb);
+        N<-nrow(df)
         df.positions         <- f.initPositions(symb,N);
-        df.positions$Date    <- index(df.P.xts);
-        df.positions$Last    <- as.numeric(df.P.xts$Close);
-        
-        df.Pos              <- merge.data.frame(df.positions, df.T, by="Date", all=TRUE);
-        df.Pos[is.na(df.Pos)]<-0
-        fnout<-"df.Pos.csv";write.csv(df.Pos,file=fnout);
-        #-----------------------------------------------------------------------------------------------------------
-        #     Dexcription of df.Positions data frame
-        #-----------------------------------------------------------------------------------------------------------
-        #  Column             |    Long Positions    |   Short Positions |
-        #                     |                      |                   |
-        #    Date             |                      |                   |
-        #   Symbol            |                      |                   |
-        #   Position          |    Long              |     Short         |
-        #   quantity          |    +20               |     -20           |
-        #   AvePrice          |    8.50              |      8.50         |
-        #   Last              |    11.50             |     11.50         |
-        #   OpenPandL         |    60.00             |     -60.00        |
-        #   OpenPerShare      |     3.00             |      -3.00        |
-        #   OpenPLpct         |                      |                   |
-        #   TotalCost         |    8.50 x 20 = 170   | 8.50 x -20 = -170 |                    |                   |
-        #   MarketValue       |    11.50 x 20= 230   |11.50 x -20 = -230 |
-        #   Acct
-        #  
-        # Columns in the df.Position data frames
-        #loop through every row, updating the daiy positions for this stock
-        #Quantity     # shares held,   positive for long positions, negative for Short
-        #
-        j<-0;
-        curpos<-"";
-        curcost<-0;
-        curquantity<-0;
-        realized<-0;
-        totalrealized<-0;
-        aveprice<-0;
-        openpandl<-0;
-        while(j<nrow(df.Pos)){
-            j<-j+1;
-            curprice            <- df.Pos$Last[j];
-            adate               <- as.character(df.Pos$Date[j]);
-            ttype               <- df.Pos$TradeType[j];
-            price               <- df.Pos$price[j];
-            last                <- df.Pos$Last[j];
-            pandl               <- 0;
-            realized            <- 0;
-            
-            if(ttype != 0){
-                curpos            <- ifelse(ttype=="Margin","Long","Short");
-                tdirection        <- ifelse(df.Pos$Transaction[j]=="Buy",1,-1);
-                tquantity          <- tdirection * df.Pos$TQ[j];
-                scq<-sign(curquantity);
-                stq  <-sign(tquantity);
-                isreversal<-(scq*stq<0);
-                isaugmentation<-(scq*stq>0);
-                isopening<-(scq==0)&&(stq!=0);
-                if(isopening){
-                    curquantity<- tquantity;
-                    cost       <- price*tquantity;
-                    curcost    <- cost;
-                    aveprice   <- price;
-                    realized   <- 0;
-                    openpandl <- curquantity*(last-price);
-                }else if(isaugmentation){
-                    cost<-price*tquantity;
-                    curcost<-curcost+cost;
-                    curquantity<-curquantity+tquantity;
-                    aveprice<-curcost/curquantity;
-                    realized<-0;
-                    marketvalue       <- last*curquantity;
-                    openpandl<-curquantity*(last-aveprice);
-                }else if(isreversal){
-                    cost <- price*tquantity;
-                    curquantity<-curquantity+tquantity;
-                    realized<-scq*tquantity*(curprice-aveprice);
-                    marketvalue       <- last*curquantity;
-                    ooenpandl<-curquantity*(last-aveprice);
-                }else{
-                    marketvalue       <- last*curquantity;
-                    ooenpandl<-curquantity*(last-aveprice);
-                }
-                 totalrealized     <- totalrealized + realized;
-            }else{
-                marketvalue       <- last*curquantity;
-                ooenpandl<-curquantity*(last-aveprice);
-            }   
-            openpandlpershare <- openpandl/curquantity;
-            cat(j,adate,curpos,curquantity,aveprice,last,openpandl,openpandlpershare,curcost,marketvalue,curpos,pandl,realized,totalrealized,"\n");
-            # store in proper location
-            df.Pos$position[j]<-curpos;
-            df.Pos$quantity[j]<-curquantity;
-            df.Pos$AvePrice[j]<-aveprice;
-            df.Pos$Last[j]<-curprice;
-            df.Pos$OpenPandL[j]<-openpandl;
-            df.Pos$OpenPerShare[j]<-openpandl/curquantity;
-            df.Pos$TotalCost[j]<-curcost;
-            df.Pos$MarketValue[j]<-marketvalue;
-            df.Pos$realized[j]<-realized;
-            df.Pos$Totalrealized[j]<-totalrealized;
-          }
-          
+        t<-0;
+        while(t<nrow(df)){
+            t<-t+1;
+            df.positions$Date[t]    <- df$Date[t];
+            df.positions$symbol[t]  <- df$Symbol[t];
+            df.positions$position[t]<- ifelse(df$CurQuantity[t]<0,"Short",ifelse(df$CurQuantity[t]>0,"Long","Flat"));
+            df.positions$quantity[t]<- df$CurQuantity[t];
+            df.positions$AvePrice[t]<- df$AvePrice[t];
+            df.positions$Last[t]    <- df$Close[t];
+            df.positions$OpenPandL[t]<-df$Openprof[t];
+            df.positions$TotalCost[t]<-df$AvePrice[t]*df$CurQuantity[t];
+            df.positions$MarketValue[t]<-df$CurValue[t];
+            df.positions$Acct[t]<-"123456";
+            df.positions$realized[t]<-df$realized[t];
+            df.positions$TotalRealized[t]<-df$TotalRealized[t];
+            df.positions$OpenPerShare[t]<-df$profpershare[t];
+       }
+       l.DailyPositions[[symb]]<-df.positions;
        fnout               <-paste("D:/Projects/DDJIOutPut/Pos_",symb,".csv",sep="");
-       write.csv(df.Pos,file=fnout);
-        l.DailyPositions[[symb]]<-df.Pos;
-    }   
+       write.csv(df.positions,file=fnout);
+       
+    }
     df.AllPos<-list_df2df(l.DailyPositions);
     return(df.AllPos);
-} 
+}
+# f.derivePositions<-function(df.AllTrades,l.Prices){
+#     # construct position reports for each day given the trading record and the daily prices
+#     # there is a different position each day
+#     #create sorage structures
+#     l.DailyPositions           <- list();
+#     df.SymTrades               <- dplyr::arrange(df.AllTrades,Symbol,ActivityDate);
+#     df.AllTrades$Date          <- as.Date(df.AllTrades$ActivityDate);
+#     # df.SymTrades.xts<-f.df2xts(df.SymTrades)
+#     v.tickers<-sort(unique(df.SymTrades$Symbol));
+#     #loop through each ticker symbol, build a running position,  
+#     #for any day where there is a non-zero position,add it to the positions for that day
+#     
+#     iticker<-0;
+#     #   df.P.xts    Closing prices for this security
+#     #   df.T        transactions records for security
+#     #   df.Pos      working data frame containing daily positions and all trades aligned
+#     #
+#     #
+#     #----Loop through every day of positions
+#     #----the challenge comes when there is a reversal
+#     #table(df.SymTrades$ActivityDate)
+#     while(iticker<length(v.tickers)){
+#         iticker       <- iticker+1;
+#         symb          <- v.tickers[[iticker]];
+#         df.P.xts      <- l.Prices[[symb]];
+#         N             <- nrow(df.P.xts)
+#         df.T <- dplyr::filter(df.AllTrades,Symbol==symb)%>%dplyr::select(TradeType=Type,Transaction,TQ=Quantity,price,Amount,Date);
+#         fnout<-"df.T.csv";write.csv(df.T,file=fnout);
+#         df.tdates<-as.data.frame(table(df.T$Date));
+#         names(df.tdates)[1]<-"Date";
+#         df.tdates$Date<-as.Date(df.tdates$Date)
+#         v.seq<-seq_along(index(df.P.xts))
+#         df.td<-data.frame(Date=index(df.P.xts),v.seq);
+#         df.Trades<-merge(df.td,df.tdates,by="Date",all=TRUE);
+#         df.J<-merge(df.td,df.T,by="Date",all=TRUE);
+#         cat(iticker,symb,nrow(df.Trades),"\n");
+#         summary(df.Trades)
+#         #fnout<-"df.Trades.csv";write.csv(df.Trades,file=fnout)
+#         #initialize daily positions data frame for this symbol
+#         df.positions         <- f.initPositions(symb,N);
+#         df.positions$Date    <- index(df.P.xts);
+#         df.positions$Last    <- as.numeric(df.P.xts$Close);
+#         
+#         df.Pos              <- merge.data.frame(df.positions, df.T, by="Date", all=TRUE);
+#         df.Pos[is.na(df.Pos)]<-0
+#         fnout<-"df.Pos.csv";write.csv(df.Pos,file=fnout);
+#         #-----------------------------------------------------------------------------------------------------------
+#         #     Dexcription of df.Positions data frame
+#         #-----------------------------------------------------------------------------------------------------------
+#         #  Column             |    Long Positions    |   Short Positions |
+#         #                     |                      |                   |
+#         #    Date             |                      |                   |
+#         #   Symbol            |                      |                   |
+#         #   Position          |    Long              |     Short         |
+#         #   quantity          |    +20               |     -20           |
+#         #   AvePrice          |    8.50              |      8.50         |
+#         #   Last              |    11.50             |     11.50         |
+#         #   OpenPandL         |    60.00             |     -60.00        |
+#         #   OpenPerShare      |     3.00             |      -3.00        |
+#         #   OpenPLpct         |                      |                   |
+#         #   TotalCost         |    8.50 x 20 = 170   | 8.50 x -20 = -170 |                    |                   |
+#         #   MarketValue       |    11.50 x 20= 230   |11.50 x -20 = -230 |
+#         #   Acct
+#         #  
+#         # Columns in the df.Position data frames
+#         #loop through every row, updating the daiy positions for this stock
+#         #Quantity     # shares held,   positive for long positions, negative for Short
+#         #
+#         j<-0;
+#         curpos<-"";
+#         curcost<-0;
+#         curquantity<-0;
+#         realized<-0;
+#         totalrealized<-0;
+#         aveprice<-0;
+#         openpandl<-0;
+#         while(j<nrow(df.Pos)){
+#             j<-j+1;
+#             curprice            <- df.Pos$Last[j];
+#             adate               <- as.character(df.Pos$Date[j]);
+#             ttype               <- df.Pos$TradeType[j];
+#             price               <- df.Pos$price[j];
+#             last                <- df.Pos$Last[j];
+#             pandl               <- 0;
+#             realized            <- 0;
+#             
+#             if(ttype != "0"){
+#                 curpos            <- ifelse(ttype=="Margin","Long","Short");
+#                 tdirection        <- ifelse(df.Pos$Transaction[j]=="Buy",1,-1);
+#                 tquantity          <- tdirection * df.Pos$TQ[j];
+#                 scq<-sign(curquantity);
+#                 stq  <-sign(tquantity);
+#                 isreversal<-(scq*stq<0);
+#                 isaugmentation<-(scq*stq>0);
+#                 isopening<-(scq==0)&&(stq!=0);
+#                 if(isopening){
+#                     curquantity<- tquantity;
+#                     cost       <- price*tquantity;
+#                     curcost    <- cost;
+#                     aveprice   <- price;
+#                     realized   <- 0;
+#                     openpandl <- curquantity*(last-price);
+#                 }else if(isaugmentation){
+#                     cost<-price*tquantity;
+#                     curcost<-curcost+cost;
+#                     curquantity<-curquantity+tquantity;
+#                     aveprice<-curcost/curquantity;
+#                     realized<-0;
+#                     marketvalue       <- last*curquantity;
+#                     openpandl<-curquantity*(last-aveprice);
+#                 }else if(isreversal){
+#                     cost <- price*tquantity;
+#                     curquantity<-curquantity+tquantity;
+#                     realized<-scq*tquantity*(curprice-aveprice);
+#                     marketvalue       <- last*curquantity;
+#                     openpandl<-curquantity*(last-aveprice);
+#                 }else{
+#                     marketvalue       <- last*curquantity;
+#                     openpandl<-curquantity*(last-aveprice);
+#                 }
+#                  totalrealized     <- totalrealized + realized;
+#             }else{
+#                 marketvalue       <- last*curquantity;
+#                 openpandl<-curquantity*(last-aveprice);
+#             }   
+#             openpandlpershare <- openpandl/curquantity;
+#             cat(j,adate,curpos,curquantity,aveprice,last,openpandl,openpandlpershare,curcost,marketvalue,curpos,pandl,realized,totalrealized,"\n");
+#             # store in proper location
+#             df.Pos$position[j]<-curpos;
+#             df.Pos$quantity[j]<-curquantity;
+#             df.Pos$AvePrice[j]<-aveprice;
+#             df.Pos$Last[j]<-curprice;
+#             df.Pos$OpenPandL[j]<-openpandl;
+#             df.Pos$OpenPerShare[j]<-openpandl/curquantity;
+#             df.Pos$TotalCost[j]<-curcost;
+#             df.Pos$MarketValue[j]<-marketvalue;
+#             df.Pos$realized[j]<-realized;
+#             df.Pos$Totalrealized[j]<-totalrealized;
+#           }
+#           
+#        fnout               <-paste("D:/Projects/DDJIOutPut/Pos_",symb,".csv",sep="");
+#        write.csv(df.Pos,file=fnout);
+#         l.DailyPositions[[symb]]<-df.Pos;
+#     }   
+#     df.AllPos<-list_df2df(l.DailyPositions);
+#     return(df.AllPos);
+# } 
  #
 #
 #
