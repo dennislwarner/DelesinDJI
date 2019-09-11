@@ -183,7 +183,7 @@ fnout<-"D:/Projects/DDJIOutput/AllTrades.csv";
 write.csv(df.AllTrades,file=fnout);
 #--------------------------------------------------------------------------------------------
 #-------from the detail data  frame df.D....create the position records mimicing those from Tradestation
-df.Positions    <- f.derivePositions(df.AllTrades,l.Prices);
+df.Positions    <- f.derivePositions2(df.AllD);
 fnout           <- "D:/Projects/DDJIOutPut/AllPositions.csv";
 write.csv(df.Positions,file=fnout);
 
