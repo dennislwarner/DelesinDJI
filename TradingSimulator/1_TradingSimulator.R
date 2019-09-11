@@ -161,6 +161,7 @@ while(iticker<length(v.tickers)){
         df.Trades[nrow(df.Trades)+1,]<-f.traderecstart(symb,cname);
         
         df.Trades$TradeInd[it]<-"T";
+        df.Trades$ADP[it]<-"";
         df.Trades$Symbol[it]<-symb;
         df.Trades$Quantity[it]<-abs(df.ddt$TQ)
         df.Trades$ActivityDate[it]  <- df.ddt$Date;

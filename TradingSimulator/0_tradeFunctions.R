@@ -80,15 +80,18 @@ f.delay<-function(x){
     return(x);
 }     
 f.initTrades<-function(){
-    df.trades<-data.frame(matrix(0,0,20));
+    df.trades<-data.frame(matrix(0,0,21));
     names(df.trades)<-c(   "Account_Number",
                            "Type",
                            "TradeInd",
                            "Transaction",
                            "Quantity",
-                           "Cusip","Symbol","CallPut","underlyingSymbol",
-                           "ExpireDate","Strike_Price","TD","SD","ActivityDate","price",
-                           "Amount","CurrencyCode","Commission","Description","Order_ID");
+                           
+                           "Cusip","ADP","Symbol","CallPut","underlyingSymbol",
+                           
+                           "ExpireDate","Strike_Price","TD","SD","ActivityDate",
+                           "price","Amount","CurrencyCode","Commission","Description",
+                           "Order_ID");
     return(df.trades);
 }
 f.initTranches<-function(){
