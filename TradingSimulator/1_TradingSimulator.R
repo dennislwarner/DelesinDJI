@@ -131,6 +131,10 @@ if(length(v.signals)!=nrow(df.xts)){next}
 df.AllD<-list_df2df(l.Trades)    
 fnout<-"D:/Projects/DDJIOutput/AllD.csv";
 write.csv(df.AllD,file=fnout);
+
+
+fnin<-"D:/Projects/DDJIOutput/AllD.csv";
+df.AllD<-read.csv(fnin,stringsAsFactors = FALSE)
 df.dg<-df.AllD%>%dplyr::group_by(Date)
 df.dgsummar<-df.dg%>%summarise(MV=sum(abs(CurValue)),RZD=sum(TotalRealized),SPandL=sum(Openprof))%>%dplyr::mutate(TotalVal=MV+RZD);
 df.dgsummar.xts<-f.df2xts(df.dgsummar)
@@ -141,11 +145,11 @@ v.tickers<-sort(unique(df.AllD$Symbol))
 iticker<-0;
 l.Trades<-list();
 while(iticker<length(v.tickers)){
-    iticker<-iticker+1;
-    symb<-v.tickers[iticker];
-    thisdict<-df.DJDict%>%dplyr::filter(Symbol==symb);
-    cname<-thisdict$Description;
-    df.dd<-df.AllD%>%dplyr::filter(Symbol==symb)
+    iticker      <- iticker+1;
+    symb         <- as.character(v.tickers[iticker]);
+    thisdict     <- df.DJDict%>%dplyr::filter(Symbol==symb);
+    cname        <- thisdict$Description;
+    df.dd        <- df.AllD%>%dplyr::filter(Symbol==symb)
     #df.Trades<-f.traderecstart(symb,cname)
     df.Trades<-f.initTrades()
     #find all the records in df.dd which translate to trades
@@ -157,8 +161,8 @@ while(iticker<length(v.tickers)){
         
         df.ddt<-df.ddtrades[it,];
         
-        
-        df.Trades[nrow(df.Trades)+1,]<-f.traderecstart(symb,cname);
+        dff<-f.traderecstart(symb,cname)[,1:22];
+        df.Trades[nrow(df.Trades)+1,]<-dff;
         
         df.Trades$TradeInd[it]<-"T";
         df.Trades$ADP[it]<-"";
@@ -170,6 +174,9 @@ while(iticker<length(v.tickers)){
         df.Trades$price[it]         <- df.ddt$Open;
         df.Trades$Amount[it]        <- abs(df.ddt$TQ)*df.ddt$Open;
         df.Trades$Commission[it]    <- 5;
+        thistime<-format(Sys.time(),"%H:%M:%S")
+        ad<-format(as.Date(df.ddt$Date),"%m/%d/%Y");
+        df.Trades$ActivityTime[it]  <-paste(ad,thistime,sep=" ")
         id<-df.ddt$it
         rn<-row.names(df.ddt)
         id<-as.numeric(paste(rn,as.character(df.ddt$t),sep=""));
@@ -180,18 +187,24 @@ while(iticker<length(v.tickers)){
 }
 df.AllTrades<-list_df2df(l.Trades)
 fnout<-"D:/Projects/DDJIOutput/AllTrades.csv";
+
 write.csv(df.AllTrades,file=fnout);
+
+df.AllTrades<-read.csv(file=fnout);
+df.AllTrades[is.na(df.AllTrades)]<-0;
+fnout2<-"D:/Projects/THWPFDATA/AllTransSimulated.csv";
+write.csv(df.AllTrades[,-c(1,2)],file=fnout2)
 #--------------------------------------------------------------------------------------------
 #-------from the detail data  frame df.D....create the position records mimicing those from Tradestation
 df.Positions    <- f.derivePositions2(df.AllD);
 fnout           <- "D:/Projects/DDJIOutPut/AllPositions.csv";
 write.csv(df.Positions,file=fnout);
+fnout2<-"D:/Projects/THWPFDATA/AllPositionsSimulated.csv";
+write.csv(df.Positions,file=fnout2);
 
 
 
-
-
-fnout<-"D:/Projects/DDJIOutPut/AllPositions.csv";
+fnout<-"D:/Projects/DDJIOutPut/AllPositionsSimulated.csv";
 df.Positions<-read.csv(fnout,stringsAsFactors = FALSE);
 df.Pos<-df.Positions%>%dplyr::arrange(Date,symbol,X)
 df.G<-df.Pos%>%group_by(Date)
@@ -199,7 +212,7 @@ df.GSummar<-df.G%>%summarise(TC=sum(TotalCost),MV=sum(MarketValue),SPandL=sum(Op
 #  build a large PDF output with tables and charts, by company
 iticker<-0;
 v.tickers<-sort(unique(df.Pos$symbol))
-while (iticker<length(l.Tfades)){
+while (iticker<length(l.Trades)){
     iticker<-iticker+1;
     symb<-v.tickers[[iticker]];
     df.G<-df.Pos%>%dplyr::filter(symbol==symb)

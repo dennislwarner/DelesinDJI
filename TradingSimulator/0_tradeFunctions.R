@@ -80,7 +80,7 @@ f.delay<-function(x){
     return(x);
 }     
 f.initTrades<-function(){
-    df.trades<-data.frame(matrix(0,0,21));
+    df.trades<-data.frame(matrix(0,0,22));
     names(df.trades)<-c(   "Account_Number",
                            "Type",
                            "TradeInd",
@@ -90,7 +90,7 @@ f.initTrades<-function(){
                            "Cusip","ADP","Symbol","CallPut","underlyingSymbol",
                            
                            "ExpireDate","Strike_Price","TD","SD","ActivityDate",
-                           "price","Amount","CurrencyCode","Commission","Description",
+                           "price","Amount","CurrencyCode","Commission","Description","ActivityTime",
                            "Order_ID");
     return(df.trades);
 }
@@ -116,22 +116,21 @@ f.traderecstart<-function(sym,cname){
     #Account Number	Type	TradeInd	Transaction	Quantity	Cusip	Symbol	CallPut	
     #UnderlyingSymbol	ExpireDate	StrikePrice	TD	SD	Activity Date	Price	Amount
     #CurrencyCode	Commission	Description	Order ID
-    df.traderecord<-data.frame(matrix(0,1,20));
-    names(df.traderecord)<-c(   "Account_Number",
-                                "Type",
-                                "TradeInd",
-                                "Transaction",
-                                "Quantity",
-                                "Cusip","Symbol","CallPut","underlyingSymbol",
-                                "ExpireDate","Strike_Price","TD","SD","ActivityDate","price",
-                                "Amount","CurrencyCode","Commission","Description","Order_ID");
+    df.traderecord<-data.frame(matrix(0,1,22));
+    names(df.traderecord)<-c(   "Account_Number","Type","TradeInd","Transaction","Quantity",
+                                "Cusip","ADP","Symbol","CallPut","UnderlyingSymbol",
+                                "ExpireDate","Strike_Price","TD","SD","ActivityDate",
+                                "price","Amount","CurrencyCode","Commission","Description",
+                                "ActivityTime","Order_ID");
+    
+    
     df.traderecord$Account_Number    <-"123456";
     df.traderecord$Type              <-"";
     df.traderecordTradeInd           <-"T";
     df.traderecord$Transaction       <-"Buy/Sell";
     df.traderecord$Quantity          <-0;
     df.traderecord$Cusip             <-"11111t";
-    df.traderecord$Symbol            <-"AAPL";
+    df.traderecord$Symbol            <-sym;
     df.traderecord$CallPut           <-"";
     df.traderecord$underlyingSymbol  <-"";
     df.traderecord$ExpireDate        <-"";
