@@ -202,11 +202,8 @@ write.csv(df.Positions,file=fnout);
 fnout2<-"D:/Projects/THWPFDATA/AllPositionsSimulated.csv";
 write.csv(df.Positions,file=fnout2);
 
-
-
-fnout<-"D:/Projects/DDJIOutPut/AllPositionsSimulated.csv";
-df.Positions<-read.csv(fnout,stringsAsFactors = FALSE);
-df.Pos<-df.Positions%>%dplyr::arrange(Date,symbol,X)
+df.Positions<-read.csv(fnout2,stringsAsFactors = FALSE);
+df.Pos<-df.Positions%>%dplyr::arrange(Date,symbol,X);
 df.G<-df.Pos%>%group_by(Date)
 df.GSummar<-df.G%>%summarise(TC=sum(TotalCost),MV=sum(MarketValue),SPandL=sum(OpenPandL));
 #  build a large PDF output with tables and charts, by company
