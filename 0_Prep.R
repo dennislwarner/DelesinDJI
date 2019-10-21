@@ -2,7 +2,9 @@
 #------------Get ETF Dictionary
 dt.ETFDict      <- suppressMessages(read_csv(paste(dirDocs, "/ETFDictionary.csv", sep = "")));
 v.etfTickers    <- dt.ETFDict$Symbol;
-df.DJDict       <- suppressMessages(read_csv(paste(dirDocs,"/DJIA_Dict.csv",sep="")))
+fnin<-paste(dirDocs,"/DJIA_Dict.csv",sep="")
+
+df.DJDict       <- suppressMessages(read.csv(file=fnin,stringsAsFactors=FALSE))
 v.tickers       <- df.DJDict$Symbol[1:30];
 v.descriptions<-df.DJDict$Description[1:30];
 fnin            <- paste(dirDocs, "/dt.Common.csv", sep = "");
