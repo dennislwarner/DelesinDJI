@@ -11,32 +11,31 @@ f.buildDJIdata<-function(){
     firstdate    <- index(first(df.odata.xts));
     lastdate     <- index(last(df.odata.xts));
     origspan     <- paste(firstdate,"/",lastdate,sep="");
+    library(readxl);
+   # we must  find all the split dates for every dow component----
+    df.DJIAComposition  <- read_xlsx(paste(dirDocs, "/DJIAComposition.xlsx", sep = ""), sheet = "DJIAComposition")
+    v.numstocks         <- df.DJIAComposition$NumStocks
+    df.DJ               <- df.DJIAComposition %>% dplyr::select(-NumStocks)
+    v.djnames           <- c("Dates", sort(names(df.DJ)[-1]))
+    df.DJ               <- df.DJIAComposition[,v.djnames]%>%dplyr::select(-DOW)
+    df.DJ.xts           <- f.df2xts(df.DJ)
+    firstj              <- index(first(df.DJ.xts))-1095
+    lastj               <- index(last(df.DJ.xts))
+    djspan              <- paste(firstj,"/",lastj,sep="");
+    df.SPY.xts          <- f.getSPY()%>%f.df2xts()
+    df.SPY.xts          <- df.SPY.xts[djspan]
+    df.Y.xts            <- merge.xts(df.odata.xts,df.Y.xts,join='left')[origspan]
+    m.membership        <- coredata(df.X.xts)[,-c(1:3)]
     
-    #we must  find all the split dates for every dow component----
-    df.DJIAComposition<-read.xlsx(paste(dirDocs,"/DJIAComposition.xlsx",sep=""),sheetName="DJIAComposition");
-    v.numstocks<-df.DJIAComposition$NumStocks;
-    df.DJ<-df.DJIAComposition%>%dplyr::select(-NumStocks)
-    v.djnames<-c("Dates",sort(names(df.DJ)[-1]));
-    df.DJ<-df.DJIAComposition[,v.djnames]%>%dplyr::select(-DOW)
-    df.DJ.xts<-f.df2xts(df.DJ)
-    firstj<-index(first(df.DJ.xts))-1095
-    lastj<-index(last(df.DJ.xts))
-    djspan<-paste(firstj,"/",lastj,sep="");
-    df.SPY.xts<-f.getSPY()%>%f.df2xts()
-    df.SPY.xts<-df.SPY.xts[djspan]
-    df.Y.xts<-merge.xts(df.SPY.xts,df.DJ.xts)%>%na.locf()%>%f.xts2df()%>%dplyr::select(-Close)%>%f.df2xts()
-    df.X.xts<-merge.xts(df.odata.xts,df.Y.xts,join='left')[origspan]
-    m.membership<-coredata(df.X.xts)[,-c(1:3)]
-    
-    df.P.xts<-df.SPY.xts[origspan]
-    df.UP.xts<-df.P.xts
-    df.AP.xts<-df.P.xts
-    v.tickers<-names(df.DJ.xts)
+    df.P.xts           <- df.SPY.xts[origspan]
+    df.UP.xts          <- df.P.xts
+    df.AP.xts          <- df.P.xts
+    v.tickers          <- names(df.DJ.xts)
     
     iticker<-0;
     while(iticker < length(v.tickers)){
-        iticker<-iticker+1;
-        symb<-v.tickers[iticker];
+        iticker   <-iticker+1;
+        symb      <-v.tickers[iticker];
         #cat(iticker,symb,"\n");
         df.cc<-dt.Common%>%dplyr::filter(ticker==symb)
         

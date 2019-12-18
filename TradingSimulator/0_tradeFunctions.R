@@ -80,7 +80,7 @@ f.delay<-function(x){
     return(x);
 }     
 f.initTrades<-function(){
-    df.trades<-data.frame(matrix(0,0,22));
+    df.trades<-data.frame(matrix(0,0,24));
     names(df.trades)<-c(   "Account_Number",
                            "Type",
                            "TradeInd",
@@ -91,7 +91,7 @@ f.initTrades<-function(){
                            
                            "ExpireDate","Strike_Price","TD","SD","ActivityDate",
                            "price","Amount","CurrencyCode","Commission","Description","ActivityTime",
-                           "Order_ID");
+                           "Order_ID","StartQ","EndQ");
     return(df.trades);
 }
 f.initTranches<-function(){

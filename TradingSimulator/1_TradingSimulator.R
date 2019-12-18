@@ -151,9 +151,9 @@ while(iticker<length(v.tickers)){
     cname        <- thisdict$Description;
     df.dd        <- df.AllD%>%dplyr::filter(Symbol==symb)
     #df.Trades<-f.traderecstart(symb,cname)
-    df.Trades<-f.initTrades()
+    df.Trades<-f.initTrades();
     #find all the records in df.dd which translate to trades
-    df.ddtrades<-df.dd%>%dplyr::filter(TQ!=0)
+    df.ddtrades<-df.dd%>%dplyr::filter(TQ!=0)  #look at only the log entries which had non-zero trading volume
     
     it<-0;
     while(it<nrow(df.ddtrades)){
@@ -169,10 +169,21 @@ while(iticker<length(v.tickers)){
         df.Trades$Symbol[it]<-symb;
         df.Trades$Quantity[it]<-abs(df.ddt$TQ)
         df.Trades$ActivityDate[it]  <- df.ddt$Date;
-        df.Trades$Type[it]<-ifelse(((df.ddt$StartQ<0)||(df.ddt$EndQ<0)),"Short","Margin");
-        df.Trades$Transaction[it]<-ifelse((df.ddt$TQ>0),"Buy","Sell");
+        df.Trades$Type[it]<-"Margin";
+        startq<-df.ddt$StartQ
+        endq<-df.ddt$EndQ
+        df.Trades$StartQ[it]<-startq;
+        df.Trades$EndQ[it]<-endq;
+        if((startq<0)||(endq<0)){df.Trades$Type[it]<-"Short"}
+        shareflow<-df.ddt$EndQ-df.ddt$StartQ;
+        if(shareflow>0){
+            df.Trades$Transaction[it]<-"Buy"
+        }else{
+            df.Trades$Transaction[it]<-"Sell";
+        }
+        #df.Trades$Transaction[it]<-ifelse((df.ddt$TQ>0),"Buy","Sell");
         df.Trades$price[it]         <- df.ddt$Open;
-        df.Trades$Amount[it]        <- abs(df.ddt$TQ)*df.ddt$Open;
+        df.Trades$Amount[it]        <- abs(shareflow)*df.ddt$Open;
         df.Trades$Commission[it]    <- 5;
         thistime<-format(Sys.time(),"%H:%M:%S")
         ad<-format(as.Date(df.ddt$Date),"%m/%d/%Y");
@@ -183,6 +194,7 @@ while(iticker<length(v.tickers)){
         df.Trades$Order_ID[it]      <- id
     }
     l.Trades[[symb]]<-df.Trades
+    write.csv(df.Trades,file="df.Trades.csv");
    # return(df.trades );   #return to f.tradesim
 }
 df.AllTrades<-list_df2df(l.Trades)

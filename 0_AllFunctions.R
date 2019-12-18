@@ -9,7 +9,7 @@ f.deltanumeric<-function(x){
     return(y)
 }
 f.df2xts <- function(x) {
-    v.d<-as.Date(x$Date);
+    v.d<-as.Date(x$Dates);
     
     df.xts<-xts(x[,-1],order.by=v.d);
     names(df.xts)<-names(x)[-1]
