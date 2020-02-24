@@ -1,0 +1,169 @@
+---
+title: "Checking Accuracy of  Estimated Distributions in the Forecast Wizard"
+author: "Dennis Warner"
+date: "2/21/2020"
+output:
+  
+  html_document: default
+  pdf_document: default
+  always_allow_html: true
+---
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE);
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE,
+                      fig.width = 8, 
+                      fig.height = 4.5,
+                      fig.align = 'center',
+                      out.width='95%')
+library(PerformanceAnalytics)
+library(TTR)
+library(R6);
+library(Quandl);
+library(stringr);
+library(quantmod);
+library(ggplot2);
+library(dplyr);
+# Get AAPL and AMZN, and MSFT Stock Prices and SPY and DIA ETF prices
+source("D:/Projects/DDJI/0_ToolsForCharts.R",echo=FALSE);
+source("D:/Projects/DDJI/0_AllFunctions.R",echo=FALSE);
+source("D:/Projects/DDJI/0_ToolsForForeCastValues.R",echo=FALSE);
+symb<-"SPY"
+wbsymb<-"GSPC";
+symb<-"AAPL";
+wbsymb<-"AAPL";
+HP<-63;
+ANNUALIZER<-252.0/HP;
+
+  start      <- as.Date.character("2017-07-13")
+  end        <- as.Date.character("2020-01-06");
+  span       <- paste(start,"/",end,sep="");
+  df.p.xts<-f.getAdjustedClose(symb)[span,];
+  N<-nrow(df.p.xts);
+  MID<-N/2;
+  firststart<-index(df.p.xts)[1]
+  firstend<-index(df.p.xts)[MID];
+  secondstart<-index(df.p.xts)[MID+1];
+  secondend<-index(df.p.xts)[N];
+  firstHalf<-paste(firststart,"/",firstend,sep="");
+  secondHalf<-paste(secondstart,"/",secondend,sep="");
+  totalspan<-paste(firststart,"/",secondend,sep="");
+  
+  nrow(df.p.xts[firstHalf]);
+  nrow(df.p.xts[secondHalf])
+ dR.xts<-mapXts(df.p.xts,f.roc);#Get 
+ 
+ qR.xts  <- f.myxtsHPror(df.p.xts,63,"Quarterly");
+ qR.xts$Quarterly<-ANNUALIZER*qR.xts$Quarterly;
+ df.R.xts<-merge.xts(merge.xts(df.p.xts,dR.xts),qR.xts);
+ names(df.R.xts)<-c("P","dR","qR");
+  
+ l.WB<-f.GetWorkBenchSeries(wbsymb);
+ df.WB<-l.WB[[wbsymb]]$df.FVEst;
+ names(df.WB)<-c("T","pwb","dRwb","qRwb");
+ df.WB$qRwb[1:HP]<-NA
+ df.WB.xts<-as.xts(df.WB[,-1],order.by=index(df.R.xts))
+ df.All.xts<-merge.xts(df.R.xts,df.WB.xts);
+ 
+ print(summary(df.All.xts));
+ 
+
+```
+## The table above shows the daily and the (annualized) quarterly  rates of return are identically calculated.
+## so we will continue to look only at the values calculated by workbench
+##   Now look at the means and standard deviations over the split period and the whole, on daily, Holding Period(here 63 trading days), and Annual basis.
+
+```{r distributions,echo=FALSE}
+  #calculate the standard deviations for each total and sub-period
+  ##add the periods label to each row
+  df.All<-f.xts2df(df.All.xts)%>%dplyr::select(Date,pwb,dRwb,qRwb);
+ df.All$T<-seq(1:nrow(df.All))
+  df.A.xts<-f.df2xts(df.All)
+  
+  
+  df.A.xts$Period<-0;
+  df.A.xts$Period[firstHalf]<-1;
+  df.A.xts$Period[secondHalf]<-2;
+  
+  df.A<-f.xts2df(df.A.xts);
+  df.Ag<-df.A%>%dplyr::group_by(Period)
+  
+  df.stats<-df.Ag%>%summarise(mu=mean(dRwb),sd=sd(dRwb))
+  df.statsA<-dplyr::mutate(df.stats,muA=mu*252,sdA=sqrt(252)*sd);
+  
+  df.First.xts<-df.A.xts[firstHalf];
+  df.Second.xts<-df.A.xts[secondHalf];
+  df.Total.xts<-df.A.xts[totalspan];
+  
+  FirstHalf<-f.getSt(df.First.xts);
+  SecondHalf<-f.getSt(df.Second.xts);
+  Total<-f.getSt(df.Total.xts);
+  m.stats<-rbind(FirstHalf,SecondHalf,Total);
+  df.stats<-data.frame(m.stats);
+  df.stats<-df.stats%>%dplyr::mutate(qmu=63*dmu,qsgma=sqrt(63)*dsigma,amu=252*dmu,asigma=sqrt(252)*dsigma)
+  df.stats<-round(100.0*df.stats,digits=4);
+  df.stats<-data.frame(Period=c("First","Second","Total"),df.stats)
+  names(df.stats)<-c("Period","DailyMean","DailySigma","HPMean","HPSigma","AnnualMean", "AnnualSigma");
+  
+  print(df.stats);
+```
+
+### In the above table note, the HP Means are simply 63 time the Daily Means, The Annual Means are 4 times that; while the stardard deviations follolw the inverse square law, (i.e. HPSigma = sqrt(63)*DailySigma  Annual Sigma = sqrt(252)*DaiySigma).  
+
+## Estimated Distributions  
+
+     Using these values we can construct the estimated normal probability density fucntions, and the cumulative density function for the First Half, Second Half, and Total Periods.
+     
+     
+
+    
+```{r RDistributions,echo=FALSE}
+
+dfV<-f.MakeDistributions3(df.stats);  #make estimated distributions for Direct data
+dfGG<-dfV;
+plottitle<-paste("R Version of pdf (Annualized) Holding Perfiod Rates of Return for ",symb)
+p<-qplot(X,Y, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+plottitle<-paste("R Version of cdf  of Annualized Rates of Return for ",symb);
+p<-qplot(X,YC, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('(Annualized) Holding Period RoR') + 
+  ylab('Probability')+ 
+  labs(title = plottitle);
+  print (p);
+```
+```{r WBDistributions, echo=FALSE}
+  # Extract the FDV structures exxported from the WorkBench
+   dFDV<-l.WB[[wbsymb]]$df.FDVEst;
+  # restack this data frame into a longer version
+
+   df1<-dplyr::select(dFDV,X=XFirst,Y=YFirst,YC=YFirstC);
+   df2<-dplyr::select(dFDV,X=XSecond,Y=YSecond,YC=YSecondC);
+   dfT<-dplyr::select(dFDV,X=XTotal,Y=YTotal,YC=YTotalC);
+   Period<-c(rep("First",51),rep("Second",51),rep("Total",51));
+   dfGGWB<-cbind(Period,rbind(df1,df2,dfT));
+   names(dfGGWB)<-c("PeriodWB","Xwb","Ywb","YCwb")
+   dfGGWB$Xwb<-100.0*dfGGWB$Xwb
+plottitle<-paste("WorkBench Version of pdf (Annualized) Holding Perfiod Rates of Return for ",symb)
+p<-qplot(Xwb,Ywb, data=dfGGWB,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+plottitle<-paste("WorkBench Version of cdf  of Annualized Rates of Return for ",symb);
+p<-qplot(Xwb,YCwb, data=dfGGWB,color=Period, geom=c("line","point"))+
+  xlab('(Annualized) Holding Period RoR') + 
+  ylab('Probability')+ 
+  labs(title = plottitle);
+  print (p);
+
+```
+
+
+
+
+
+

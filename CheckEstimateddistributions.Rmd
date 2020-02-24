@@ -1,0 +1,428 @@
+---
+title: "Checking Accuracy of  Estimated Distributions in the Forecast Wizard"
+author: "Dennis Warner"
+date: "2/21/2020"
+output:
+  
+  html_document: default
+  pdf_document: default
+  always_allow_html: true
+---
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE);
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE,
+                      fig.width = 8, 
+                      fig.height = 4.5,
+                      fig.align = 'center',
+                      out.width='95%')
+library(PerformanceAnalytics)
+library(TTR)
+library(R6);
+library(Quandl);
+library(stringr);
+library(quantmod);
+library(ggplot2);
+library(dplyr);
+# Get AAPL and AMZN, and MSFT Stock Prices and SPY and DIA ETF prices
+source("D:/Projects/DDJI/0_ToolsForCharts.R",echo=FALSE);
+source("D:/Projects/DDJI/0_AllFunctions.R",echo=FALSE);
+source("D:/Projects/DDJI/0_ToolsForForeCastValues.R",echo=FALSE);
+symb<-"SPY"
+wbsymb<-"GSPC";
+HP<-63;
+ANNUALIZER<-252.0/HP;
+
+  start      <- as.Date.character("2017-07-13")
+  end        <- as.Date.character("2020-01-06");
+  span       <- paste(start,"/",end,sep="");
+  df.p.xts<-f.getAdjustedClose(symb)[span,];
+  N<-nrow(df.p.xts);
+  MID<-N/2;
+  firststart<-index(df.p.xts)[1]
+  firstend<-index(df.p.xts)[MID];
+  secondstart<-index(df.p.xts)[MID+1];
+  secondend<-index(df.p.xts)[N];
+  firstHalf<-paste(firststart,"/",firstend,sep="");
+  secondHalf<-paste(secondstart,"/",secondend,sep="");
+  totalspan<-paste(firststart,"/",secondend,sep="");
+  
+  nrow(df.p.xts[firstHalf]);
+  nrow(df.p.xts[secondHalf])
+ dR.xts<-mapXts(df.p.xts,f.roc);#Get 
+ 
+ qR.xts  <- f.myxtsHPror(df.p.xts,63,"Quarterly");
+ qR.xts$Quarterly<-ANNUALIZER*qR.xts$Quarterly;
+ df.R.xts<-merge.xts(merge.xts(df.p.xts,dR.xts),qR.xts);
+ names(df.R.xts)<-c("P","dR","qR");
+  
+ l.WB<-f.GetWorkBenchSeries("GSPC");
+ df.WB<-l.WB$GSPC$df.FVEst;
+ names(df.WB)<-c("T","pwb","dRwb","qRwb");
+ df.WB$qRwb[1:HP]<-NA
+ df.WB.xts<-as.xts(df.WB[,-1],order.by=index(df.R.xts))
+ df.All.xts<-merge.xts(df.R.xts,df.WB.xts);
+ 
+ summary(df.All.xts)
+ 
+
+```
+## The table above shows the daily and the (annualized) quarterly  rates of return are identically calculated.
+## so we will continue to look only at the values calculated by workbench
+##   Now look at the estimated pdf and cdf
+
+```{r distributions,echo=FALSE}
+  #calculate the standard deviations for each total and sub-period
+  ##add the periods label to each row
+  df.All<-f.xts2df(df.All.xts)%>%dplyr::select(Date,pwb,dRwb,qRwb);
+ df.All$T<-seq(1:nrow(df.All))
+  df.A.xts<-f.df2xts(df.All)
+  
+  
+  df.A.xts$Period<-0;
+  df.A.xts$Period[firstHalf]<-1;
+  df.A.xts$Period[secondHalf]<-2;
+  
+  df.A<-f.xts2df(df.A.xts);
+  df.Ag<-df.A%>%dplyr::group_by(Period)
+  
+  df.stats<-df.Ag%>%summarise(mu=mean(dRwb),sd=sd(dRwb))
+  df.statsA<-dplyr::mutate(df.stats,muA=mu*252,sdA=sqrt(252)*sd);
+  
+  df.First.xts<-df.A.xts[firstHalf];
+  df.Second.xts<-df.A.xts[secondHalf];
+  df.Total.xts<-df.A.xts[totalspan];
+  
+  FirstHalf<-f.getSt(df.First.xts);
+  SecondHalf<-f.getSt(df.Second.xts);
+  Total<-f.getSt(df.Total.xts);
+  m.stats<-rbind(FirstHalf,SecondHalf,Total);
+  
+  
+  
+  df.stats<-data.frame(m.stats);
+  df.stats$qMuProjAnn<-252*df.stats$dmu;
+  df.stats$qSigProjAnn<-sqrt(252)*df.stats$dsigma
+  df.stats<-round(100.0*data.frame(m.stats),digits=4);
+  names(df.stats)<-c("DailyMean","DailyStDev","HP Mean","HPSigma","HPMean_Proj", "HPSigma_Proj");
+  
+  print(df.stats)
+```
+
+### The summary statistics for SPY over the different periods illustrate the relative instability of the directly calculated standard deviations of the holding period yield (HPSigma).  '''print(df.Stats)''' The last column shows the value using the inverse square law (expanding the Daily Stdev, by sqrt(63)  ,  or sqrt(252) for the annualized display, as here)
+
+
+```{r WBStats,echo=FALSE}
+  df.WBStatsEst<-l.WB$GSPC$df.FStatsEst;
+  m.wbstats<-as.matrix(df.WBStatsEst[,-1]);
+m.wbstats<-100.0*m.wbstats
+df.WBStats<-round((m.wbstats),digits=2)
+ print(df.WBStats)
+```
+
+### Distributions
+
+    Using these values we can now compute the pdf and cdf.
+    
+```{r RDistributions,echo=FALSE}
+
+dfV<-f.MakeDistributions3(df.stats);  #make estimated distributions for Direct data
+dfGG<-dfV;
+plottitle<-paste("R Version of pdf (Annualized) Holding Perfiod Rates of Return for ",symb)
+p<-qplot(X,Y, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+plottitle<-paste("R Version of cdf  of Annualized Rates of Return for ",symb);
+p<-qplot(X,YC, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('(Annualized) Holding Period RoR') + 
+  ylab('Probability')+ 
+  labs(title = plottitle);
+  print (p);
+```
+```{r WBDistributions, echo=FALSE}
+  # Extract the FDV structures exxported from the WorkBench
+   dFDV<-l.WB[[wbsymb]]$df.FDVEst;
+  # restack this data frame into a longer version
+   df1<-dplyr::select(dFDV,X=XFirst,Y=YFirst,YC=YFirstC);
+   df2<-dplyr::select(dFDV,X=XSecond,Y=YSecond,YC=YSecondC);
+   dfT<-dplyr::select(dFDV,X=XTotal,Y=YTotal,YC=YTotalC);
+   Period<-c(rep("First",51),rep("Second",51),rep("Total",51));
+   dfGGWB<-cbind(Period,rbind(df1,df2,dfT));
+   names(dfGGWB)<-c("PeriodWB","Xwb","Ywb","YCwb")
+
+plottitle<-paste("WorkBench Version of pdf (Annualized) Holding Perfiod Rates of Return for ",symb)
+p<-qplot(Xwb,Ywb, data=dfGGWB,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+plottitle<-paste("WorkBench Version of cdf  of Annualized Rates of Return for ",symb);
+p<-qplot(Xwb,YCwb, data=dfGGWB,color=Period, geom=c("line","point"))+
+  xlab('(Annualized) Holding Period RoR') + 
+  ylab('Probability')+ 
+  labs(title = plottitle);
+  print (p);
+
+```
+
+
+##Clearly the Workbench and the R versions differ.  Compare in Detail
+
+```{r compare,echo=FALSE}
+   # joint the two
+   dfAll<-data.frame(dfGG,dfGGWB);
+
+```
+
+
+
+# df.WBEstimated<-read.csv("W:/Chartwork/GSPC_FDVEstimated.csv");  #Template
+# df.FDVEst<-df.WBEstimated;
+# names(df.FDVEst);
+
+#Fill the estimated FDV
+# pnorm   F(x) = P(XX,=x);  The cumulative probabiltiy Density Function
+# qnorm   if p=F(x)   x=Finvers(p)  the inverse of the cumulative normal density function
+# dnorm is the p.d.f. of the normal
+df.stats<-data.frame(l.dt$dtQ$x$data)
+
+l.resWB<-f.MakeDistributions2WB(l.WB);
+dfGGX<-data.frame(l.res$SPY$X,l.resWB$SPY$X)
+summary(l.res$SPY)
+summary(l.resWB$SPY);
+#Compare twodistributions
+plottitle<-paste("Compare WB and R Densities of (Annualized) Holding Perfiod Rates of Return for ",symb)
+p<-qplot(X,Y, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+
+
+dfGG<-l.res$SPY;
+M<-length(l.res);  # number of securities
+isym<-0;
+while(isym<M){
+  isym<-isym+1;
+  symb<-names(l.res)[isym];
+  #cat(isym,symb,"\n");
+  dfGG<-l.res[[symb]];
+plottitle<-paste("Normal Densities of (Annualized) Holding Perfiod Rates of Return for ",symb)
+p<-qplot(X,Y, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+
+plottitle<-paste("Cumulative Normal Densities of Annualized Rates of Return for ",symb);
+p<-qplot(X,YC, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('(Annualized) Holding Period RoR') + 
+  ylab('Probability')+ 
+  labs(title = plottitle);
+  print (p);
+
+}
+
+```
+    
+
+
+# Part II ---- WorkBench Results
+
+#### Here we use the reults exported from the workbench for the same data, reference period, and stocks.
+The first task is to import the results
+
+```{r ImportWorkBench, echo=FALSE}
+
+
+```
+ ### Then Show the Estimated Distributions from the WorkBench
+ 
+```{r WBDist, echo=FALSE}
+    v.periods<-c("First","Second","Total");
+    isymb<-0;
+    while(isymb<numTickers){
+      isymb<-isymb+1;
+      symb<-v.tickers[isymb];
+      dfFDV<-(l.WB[[symb]])$df.FDVEst;#extract the Fore Dist Values for a stock
+      #Stack the period subsets in a longer data.frame also grouped by Period
+      df1<-dplyr::select(dfFDV,X=XFirst,Y=YFirst,YC=YFirstC);
+      df2<-dplyr::select(dfFDV,X=XSecond,Y=YSecond,YC=YSecondC);
+      dfT<-dplyr::select(dfFDV,X=XTotal,Y=YTotal,YC=YTotalC);
+      dfOne<-data.frame(Period="First",df1);
+      dfTwo<-data.frame(Period="Second",df2);
+      dfTotal<-data.frame(Period="Total",dfT);
+      dfGG<-rbind(dfOne,dfTwo,dfTotal);
+      # iperiod<-0;
+      # while(iperiod<length(v.periods)){
+      #   iperiod<-iperiod+1;
+      #   period<-v.periods[iperiod];
+      #   dfg<-dplyr::select(dfFDV,X=XFirst,Y=YFirst,YC=YFirstC)%>%filter(,Period==period)
+      #   if(iperiod==1){
+      #     dfGG<-data.frame("Period"=period,dfg);
+      #   }else{
+      #     dfg<-data.frame("Period"=period,dfg)
+      #     dfGG<-rbind(dfGG,dfg)
+      #   }
+      # }
+      plottitle<-paste("Normal Densities of (WorkBench Annualized) Holding Period Rates of Return for ",symb)
+p<-qplot(X,Y, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('Holding Period RoR') + 
+  ylab('density')+ 
+  labs(title = plottitle);  
+print (p);
+      
+plottitle<-paste("Cumulative Normal Densities of Annualized Rates of Return for ",symb);
+p<-qplot(X,YC, data=dfGG,color=Period, geom=c("line","point"))+
+  xlab('(Annualized) Holding Period RoR') + 
+  ylab('Probability')+ 
+  labs(title = plottitle);
+  print (p);
+    }
+
+```
+ 
+
+
+
+<!-- ##  Finally we look at the projected prices, where we  allow the user to set the target price, 1 holding period out, and we compute and display the compound rate of return that is required (or the user may set the rate and we show the consequent price).  Around the projected price path we draw a one-standard deviation cone of uncertainty. -->
+
+
+
+<!-- #Get values from Workench -->
+<!-- df.mySPY<-read.csv("W:/ChartWork/RawGSPC.csv"); -->
+
+<!-- #Get values from Workench -->
+<!-- df.FDVEst<-read.csv("W:/ChartWork/ForeDistValuesEstimated.csv"); -->
+<!-- df.FDVEmp<-read.csv("W:/ChartWork/ForeDistValuesempirical.csv"); -->
+<!-- df.FVEst<-read.csv("W:/ChartWork/FValuesEstimated.csv"); -->
+<!-- df.FVEmp<-read.csv("W:/ChartWork/FValuesEmpirical.csv"); -->
+<!-- ##Transform the FV time series into xts objects -->
+<!-- df.FVEst.xts<-as.xts(df.FVEst,order.by=index(df.SPY.xts)); -->
+<!-- df.FVEmp.xts<-as.xts(df.FVEmp,order.by=index(df.SPY.xts)); -->
+<!-- df.SPYAllROR.xts<-allReturns(df.SPY.xts,type='log') -->
+<!-- ``` -->
+
+
+
+
+<!-- plot.xts(df.FVEmp.xts$HRor) -->
+
+
+<!-- df.Estimated<-read.csv("W:/Chartwork/GSPCEstimated2.csv"); -->
+
+<!-- df.mySPY.xts<-as.xts(df.SPY,order.by = index(df.SPY.xts)) -->
+<!-- names(df.mySPY.xts)<-c("myAdj_Close","mydRor"); -->
+<!-- df.myHRor.xts<-f.myxtsHPror(df.mySPY.xts$myAdj_Close,60,"myHPRor") -->
+
+<!-- df.JointP<-merge.xts(df.SPY.xts,df.mySPY.xts); -->
+<!-- summary(df.JointP) -->
+<!-- df.J.xts<-merge.xts(df.SPY.xts,df.mySPY.xts); -->
+<!-- df.J.xts<-merge.xts(df.J.xts,dr.xts) -->
+<!-- df.J.xts<-merge.xts(df.J.xts,hr.xts) -->
+<!-- df.J.xts<-merge.xts(df.J.xts,df.myHRor.xts$myHPRor) -->
+<!-- #head(df.J.xts) -->
+<!-- df.J.xts<-df.J.xts[-(1:61),] -->
+<!-- summary(df.SPY.xts) -->
+<!-- plot.xts(df.SPY.xts) -->
+<!-- ``` -->
+
+<!-- ### Convert this to a time series of 60-day holding period yields, and look at the first half, second half, and total period characteristics.NB, the first 60 periods are lost, leaving 565 of the original 625 observations for analysis. -->
+
+<!-- ```{r conversion, echo = FALSE, message = FALSE, warning = FALSE} -->
+
+<!-- #summary(df.myHRor.xts) -->
+<!-- #summary(df.myHRor.xts[firstHalf,]); -->
+<!-- #summary(df.myHRor.xts[secondHalf,]); -->
+
+
+<!-- myMu<-mean(as.numeric(df.J.xts$myHPRor)); -->
+<!-- mysd<-sd(df.J.xts$myHPRor); -->
+<!-- xMuT<-mean(as.numeric(df.J.xts$HPRor)) -->
+<!-- xsdT<-sd(df.J.xts$HPRor) -->
+
+<!-- xMu1<-mean(df.J.xts[firstHalf,"HPRor"]); -->
+<!-- xsd1<-sd(df.J.xts[firstHalf,"HPRor"]); -->
+
+<!-- xMu2<-mean(df.J.xts[secondHalf,"HPRor"]); -->
+<!-- xsd2<-mean(df.J.xts[secondHalf,"HPRor"]); -->
+
+<!-- dfStats<-data.frame(matrix(0,3,3)); -->
+<!-- names(dfStats)<-c("Period","Mean","StDev"); -->
+<!-- dfStats[1,]<-c("Total",round(xMuT,digits=4),round(xsdT,digits=4)); -->
+<!-- dfStats[2,]<-c("FirstHalf",round(xMu1,digits=4),round(xsd1,digits=4)); -->
+<!-- dfStats[3,]<-c("SecondHalf",round(xMu2,digits=4),round(xsd2,digits=4)); -->
+
+<!-- dfStats; -->
+<!-- plot.xts(df.myHRor.xts,main="SPY 60 Day Holding Period Rates of Return") -->
+<!-- ``` -->
+
+<!-- ### Now derive the distributions -->
+
+<!-- ```{r} -->
+<!-- names(df.Estimated); -->
+<!-- df.Estimated$Xtotal -->
+<!-- pseq1<-seq(.01,.49,by=.02); -->
+<!-- pseq2<-seq(.51,.99,by=.02); -->
+<!-- pseq<-c(pseq1,0.50,pseq2); -->
+
+<!-- m.X<-matrix(0,nrow=length(pseq),ncol=6); -->
+<!-- m.Y<-m.X; -->
+
+
+<!-- m.X[,1]<-qnorm(pseq,mean=xMuT, sd=xsdT); -->
+<!-- m.Y[,1]<-dnorm(m.X[,1],mean=xMuT,sd=xsdT); -->
+
+<!-- m.X[,2]<-qnorm(pseq,mean=xMu1,sd=xsd1) -->
+<!-- m.Y[,2]<-dnorm(m.X[,2],mean=xMu1,sd=xsd1); -->
+
+<!-- m.X[,3]<-qnorm(pseq,mean=xMu2,sd=xsd2); -->
+<!-- m.Y[,3]<-dnorm(m.X[,3],mean=xMu2,sd=xsd2); -->
+
+<!-- m.X[,4]<-df.Estimated$Xtotal; -->
+<!-- m.Y[,4]<-df.Estimated$Ytotal; -->
+
+<!-- m.X[,5]<-df.Estimated$Xfirst; -->
+<!-- m.Y[,5]<-df.Estimated$Yfirst; -->
+
+<!-- m.X[,6] <-df.Estimated$Xsecond; -->
+<!-- m.Y[,6]<-df.Estimated$Ysecond; -->
+
+
+<!-- df.GG<-data.frame("Prob"=pseq,m.X,m.Y); -->
+<!-- names(df.GG)<-c("Prob","XT","X1","X2","myXT","myX1","myX2","YT","Y1","Y2","myYT","myY1","myY2"); -->
+<!-- df.GG<-data.frame(m.X); -->
+<!-- apply(df.GG,2,mean); -->
+<!-- apply(df.GG,2,sd); -->
+<!-- ggplot() +  -->
+<!--   geom_line(datadfGG[dfGG$Period==1,] , aes(x = X, y = Y), color = "red") + -->
+<!--   geom_line(data = dfGG[dfGG$Period==2,], aes(x = X, y = Y), color = "blue") + -->
+<!--   geom_line(data = dfGG[dfGG$Period==0,], aes(x = X, y = Y), color = "black") + -->
+<!--   xlab('Holding Period RoR') + -->
+<!--   ylab('density')+ -->
+<!--   labs(title = "Normal Densities"); -->
+<!-- ``` -->
+
+
+<!-- m.X[,2 -->
+<!-- ] -->
+
+<!-- ```{r PerformanceAnalytics, echo = FALSE, message = FALSE, warning = FALSE} -->
+
+<!-- table.TrailingPeriods(df.SPYAllRates.xts, periods=c(1,5,21,63,252)) -->
+<!-- dr<-df.SPYAllRates.xts$daily -->
+<!-- fivenum(df.SPYAllRates.xts) -->
+<!-- dr[is.na(dr)]<-0.0; -->
+<!-- sd(dr$daily) -->
+<!-- data(edhec) -->
+<!--     sd.annualized(edhec) -->
+<!--     sd.annualized(edhec[,6,drop=FALSE]) -->
+<!--     # now for three periods: -->
+<!--     sd.multiperiod(edhec[,6,drop=FALSE],scale=12) -->
+<!--     sd.multiperiod(dr,scale=252) -->
+<!--     sd.multiperiod(dr,scale=63) -->
+<!-- ``` -->
+

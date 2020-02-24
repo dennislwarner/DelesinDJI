@@ -9,7 +9,7 @@ f.deltanumeric<-function(x){
     return(y)
 }
 f.df2xts <- function(x) {
-    v.d<-as.Date(x$Dates);
+    v.d<-as.Date(x$Date);
     
     df.xts<-xts(x[,-1],order.by=v.d);
     names(df.xts)<-names(x)[-1]
@@ -55,9 +55,12 @@ f.getPricesA <- function(v.tickers) {
         }else{
             fn <- paste("EOD/",itick, ".11", sep = "")
         }
-        fn2<-paste("EOD/",itick,  sep = "")
-        df.xts<-Quandl(fn2,api_key = '1yhZtVwmHpc7qys3iMuJ',
-                   type = "xts", start_date = "2003-01-01");
+        #fn2<-paste("EOD/",itick,  sep = "")
+        df.xts<- Quandl(fn,
+                        api_key = '1yhZtVwmHpc7qys3iMuJ',
+                        type = "xts",
+                        start_date = "2003-01-01");
+        names(df.xts)=itick;
         l.prices[[itick]]<-df.xts;
     }
     return(l.prices);    
