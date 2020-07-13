@@ -1,3 +1,10 @@
+f.cstats<-function(x){
+    co=length(x[!is.na(x)]);  # The Count
+    mu=mean(x,na.rm=TRUE);
+    sigma<-sd(x,na.rm=TRUE);
+    v<-c(count=co,mu=round(100*mu,digits=2),sigma=round(100*sigma,digits=2));
+    return(v);
+}
 f.delta<-function(x){
     y<-c(0,diff(x,1))
     return(y)
@@ -42,6 +49,26 @@ f.divSum<-function(x,y,z){
     vv<-na.locf(v,na.rm=FALSE);
     return(vv)
 }
+f.extractCol<-function(x.xts,colname){
+    y.xts<-x.xts[,colname]
+    y.xts<-y.xts[!is.na(y.xts),]
+    return(y.xts)
+}
+f.getDividends<-function(v.tickers){
+    it<-0;
+    N<length(v.tickers);
+    l.div<-list();
+    while(it<N){
+        it<-it+1
+        itick<-v.tickers[it];
+        #get full table
+        fn<-paste("SEP/",itick,sep="");
+        df.xts<- Quandl(fn,
+                        api_key='so3y37yZcLagJq2PgBSV',
+                        type = "xts",
+                        start_date = "2003-01-01");
+    }
+}
 f.getPricesA <- function(v.tickers) {
     it <- 0;
     N<-length(v.tickers);
@@ -56,8 +83,9 @@ f.getPricesA <- function(v.tickers) {
             fn <- paste("EOD/",itick, ".11", sep = "")
         }
         #fn2<-paste("EOD/",itick,  sep = "")
+        #api_key = '1yhZtVwmHpc7qys3iMuJ',
         df.xts<- Quandl(fn,
-                        api_key = '1yhZtVwmHpc7qys3iMuJ',
+                        api_key='so3y37yZcLagJq2PgBSV',
                         type = "xts",
                         start_date = "2003-01-01");
         names(df.xts)=itick;
@@ -122,6 +150,12 @@ f.internalFill<-function(x){
         y[firstgood:lastgood]<-na.locf(x[firstgood:lastgood])
         return(y)
     }
+}
+f.MakeCstatsTibble<-function(df){
+    m.stats<-t(apply(df,2, function(x) f.cstats(x)));
+    dt<-tibble(Freq=row.names(m.stats),m.stats[,1],m.stats[,2],m.stats[,3])
+    names(dt)<-c("Freq",colnames(m.stats))
+    return(dt)
 }
 f.OneYearChange<-function(Q){
     N<-length(Q)
